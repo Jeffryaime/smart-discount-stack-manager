@@ -70,18 +70,9 @@ function Dashboard() {
 												'Current location:',
 												window.location.pathname
 											);
-onClick={() => {
-  console.log('Navigate to view all stacks');
-  console.log('Current location:', window.location.pathname);
-  try {
-    navigate('/discount-stacks');
-    console.log('Navigation called successfully');
-  } catch (error) {
-    console.error('Navigation error:', error);
-    // Fallback to window.location if navigate fails
-    window.location.href = '/discount-stacks';
-  }
-}}
+											navigate('/discount-stacks/create');
+										}}
+									>
 										Create Your First Stack
 									</Button>
 									<Button
