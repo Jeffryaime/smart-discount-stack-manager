@@ -1,0 +1,31 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+name = "smart-discount-stack-manager"
+client_id = "YOUR_SHOPIFY_API_KEY"
+application_url = "https://your-app-domain.com"
+embedded = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_products,write_products,read_orders,write_orders,read_discounts,write_discounts"
+
+[auth]
+redirect_urls = [
+  "https://your-app-domain.com/api/auth/callback",
+  "https://your-app-domain.com/api/auth/shopify/callback",
+]
+
+[webhooks]
+api_version = "2023-07"
+
+[pos]
+embedded = false
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "your-development-store.myshopify.com"
+include_config_on_deploy = true
+
+[build.dev]
+command = "npm run dev"
+url = "http://localhost:3000"
