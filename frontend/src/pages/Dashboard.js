@@ -70,7 +70,12 @@ function Dashboard() {
 												'Current location:',
 												window.location.pathname
 											);
-											navigate('/discount-stacks/create');
+											try {
+												navigate('/discount-stacks/create');
+												console.log('Navigation called successfully');
+											} catch (error) {
+												console.error('Navigation error:', error);
+											}
 										}}
 									>
 										Create Your First Stack
