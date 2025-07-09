@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 name = "smart-discount-stack-manager"
-client_id = "YOUR_SHOPIFY_API_KEY"
+client_id = "your_actual_api_key_from_partner_dashboard"
 application_url = "${SHOPIFY_APP_URL}"
 embedded = true
 

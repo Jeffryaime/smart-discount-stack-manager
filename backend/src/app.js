@@ -4,26 +4,10 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 const connectDB = require('./config/database');
-const redis = require('redis');
+const redisClient = require('./config/redis');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// Create Redis client instance
-const redisClient = redis.createClient({
-	url: process.env.REDIS_URL,
-});
-
-// Connect to Redis once when app starts
-redisClient.connect().catch((error) => {
-	console.error('Redis connection failed:', error);
-	process.exit(1);
-});
-
-// Handle Redis client errors
-redisClient.on('error', (error) => {
-	console.error('Redis client error:', error);
-});
 
 // Middleware
 app.use(helmet());
