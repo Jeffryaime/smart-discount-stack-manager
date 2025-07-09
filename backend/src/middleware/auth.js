@@ -9,6 +9,17 @@ const verifyShopifyAuth = async (req, res, next) => {
       return res.status(400).json({ error: 'Shop parameter is required' });
     }
 
+    // Skip authentication in development mode for testing
+    if (process.env.NODE_ENV === 'development' && shop === 'test-shop.myshopify.com') {
+      console.log('Development mode: Skipping Shopify auth for test shop');
+      req.session = {
+        shop: shop,
+        accessToken: 'test-token',
+        id: 'test-session'
+      };
+      return next();
+    }
+
     // Verify shop session
     const session = await shopify.session.findSessionsByShop(shop);
     
