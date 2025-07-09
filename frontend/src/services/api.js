@@ -14,10 +14,14 @@ apiClient.interceptors.request.use((config) => {
   const urlParams = new URLSearchParams(window.location.search);
   const shop = urlParams.get('shop');
   
-  if (shop) {
+  // In development mode, use a default shop if none provided
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const shopParam = shop || (isDevelopment ? 'test-shop.myshopify.com' : null);
+  
+  if (shopParam) {
     config.params = {
       ...config.params,
-      shop,
+      shop: shopParam,
     };
   }
   

@@ -35,7 +35,10 @@ function Dashboard() {
       title="Smart Discount Stack Manager"
       primaryAction={{
         content: 'Create Discount Stack',
-        onAction: () => navigate('/discount-stacks/create'),
+        onAction: () => {
+          console.log('Primary action clicked');
+          navigate('/discount-stacks/create');
+        },
       }}
     >
       <Layout>
@@ -51,12 +54,32 @@ function Dashboard() {
                 <HorizontalStack>
                   <Button
                     primary
-                    onClick={() => navigate('/discount-stacks/create')}
+                    onClick={() => {
+                      console.log('Navigate to create discount stack');
+                      console.log('Current location:', window.location.pathname);
+                      try {
+                        navigate('/discount-stacks/create');
+                        console.log('Navigation called successfully');
+                      } catch (error) {
+                        console.error('Navigation error:', error);
+                        console.log('Trying window.location fallback');
+                        window.location.href = '/discount-stacks/create';
+                      }
+                    }}
                   >
                     Create Your First Stack
                   </Button>
                   <Button
-                    onClick={() => navigate('/discount-stacks')}
+                    onClick={() => {
+                      console.log('Navigate to view all stacks');
+                      console.log('Current location:', window.location.pathname);
+                      try {
+                        navigate('/discount-stacks');
+                        console.log('Navigation called successfully');
+                      } catch (error) {
+                        console.error('Navigation error:', error);
+                      }
+                    }}
                   >
                     View All Stacks
                   </Button>
