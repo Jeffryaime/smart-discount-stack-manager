@@ -5,7 +5,8 @@ import {
   Button,
   DataTable,
   Badge,
-  Stack,
+  HorizontalStack,
+  VerticalStack,
   Filters,
   ChoiceList,
   TextField,
@@ -59,7 +60,7 @@ function DiscountStacks() {
     stack.isActive ? <Badge status="success">Active</Badge> : <Badge>Inactive</Badge>,
     stack.discounts.length,
     stack.usageCount || 0,
-    <Stack horizontal>
+    <HorizontalStack>
       <Button
         plain
         onClick={() => navigate(`/discount-stacks/${stack._id}/edit`)}
@@ -73,7 +74,7 @@ function DiscountStacks() {
       >
         Delete
       </Button>
-    </Stack>
+    </HorizontalStack>
   ]);
 
   const filters = [
@@ -107,7 +108,7 @@ function DiscountStacks() {
     >
       <Card>
         <div style={{ padding: '20px' }}>
-          <Stack vertical spacing="loose">
+          <VerticalStack gap="5">
             <Filters
               filters={filters}
               onFiltersChange={handleFiltersChange}
@@ -126,7 +127,7 @@ function DiscountStacks() {
                 sortable={[true, true, true, true, true, false]}
               />
             )}
-          </Stack>
+          </VerticalStack>
         </div>
       </Card>
 

@@ -4,6 +4,10 @@ import { discountStacksApi } from '../services/api';
 export const useDiscountStacks = () => {
   return useQuery('discountStacks', discountStacksApi.getAll, {
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    onError: (error) => {
+      console.error('Error fetching discount stacks:', error);
+    },
   });
 };
 

@@ -14,27 +14,40 @@ import Settings from './pages/Settings';
 const queryClient = new QueryClient();
 
 function App() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const host = urlParams.get('host');
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
   const config = {
     apiKey: process.env.REACT_APP_SHOPIFY_API_KEY,
-    host: new URLSearchParams(window.location.search).get('host'),
-    forceRedirect: true,
+    host: host || (isDevelopment ? 'localhost' : null),
+    forceRedirect: !isDevelopment,
   };
+
+  const AppContent = () => (
+    <AppProvider i18n={enTranslations}>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/discount-stacks" element={<DiscountStacks />} />
+            <Route path="/discount-stacks/create" element={<CreateDiscountStack />} />
+            <Route path="/discount-stacks/:id/edit" element={<EditDiscountStack />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </Router>
+      </QueryClientProvider>
+    </AppProvider>
+  );
+
+  // In development mode, allow direct access without Shopify context
+  if (isDevelopment && !host) {
+    return <AppContent />;
+  }
 
   return (
     <AppBridgeProvider config={config}>
-      <AppProvider i18n={enTranslations}>
-        <QueryClientProvider client={queryClient}>
-          <Router>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/discount-stacks" element={<DiscountStacks />} />
-              <Route path="/discount-stacks/create" element={<CreateDiscountStack />} />
-              <Route path="/discount-stacks/:id/edit" element={<EditDiscountStack />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
-          </Router>
-        </QueryClientProvider>
-      </AppProvider>
+      <AppContent />
     </AppBridgeProvider>
   );
 }

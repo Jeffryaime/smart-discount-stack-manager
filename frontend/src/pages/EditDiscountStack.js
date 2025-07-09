@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Page,
   Card,
@@ -8,16 +8,19 @@ import {
   Button,
   HorizontalStack,
   Checkbox,
-  Select,
   Banner,
+  SkeletonPage,
+  SkeletonBodyText,
 } from '@shopify/polaris';
-import { useNavigate } from 'react-router-dom';
-import { useCreateDiscountStack } from '../hooks/useDiscountStacks';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useDiscountStack, useUpdateDiscountStack } from '../hooks/useDiscountStacks';
 import DiscountRuleForm from '../components/DiscountRuleForm';
 
-function CreateDiscountStack() {
+function EditDiscountStack() {
   const navigate = useNavigate();
-  const createDiscountStack = useCreateDiscountStack();
+  const { id } = useParams();
+  const { data: discountStack, isLoading, error } = useDiscountStack(id);
+  const updateDiscountStack = useUpdateDiscountStack();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -31,6 +34,20 @@ function CreateDiscountStack() {
 
   const [errors, setErrors] = useState({});
 
+  useEffect(() => {
+    if (discountStack) {
+      setFormData({
+        name: discountStack.name || '',
+        description: discountStack.description || '',
+        isActive: discountStack.isActive !== undefined ? discountStack.isActive : true,
+        discounts: discountStack.discounts || [],
+        startDate: discountStack.startDate ? discountStack.startDate.split('T')[0] : '',
+        endDate: discountStack.endDate ? discountStack.endDate.split('T')[0] : '',
+        usageLimit: discountStack.usageLimit || '',
+      });
+    }
+  }, [discountStack]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     
@@ -43,12 +60,12 @@ function CreateDiscountStack() {
       return;
     }
 
-    createDiscountStack.mutate(formData, {
+    updateDiscountStack.mutate({ id, data: formData }, {
       onSuccess: () => {
         navigate('/discount-stacks');
       },
       onError: (error) => {
-        console.error('Error creating discount stack:', error);
+        console.error('Error updating discount stack:', error);
       }
     });
   };
@@ -81,9 +98,41 @@ function CreateDiscountStack() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <SkeletonPage primaryAction title="Edit Discount Stack">
+        <Card>
+          <Card.Section>
+            <SkeletonBodyText />
+          </Card.Section>
+        </Card>
+      </SkeletonPage>
+    );
+  }
+
+  if (error) {
+    return (
+      <Page
+        title="Edit Discount Stack"
+        breadcrumbs={[
+          { content: 'Discount Stacks', url: '/discount-stacks' },
+        ]}
+      >
+        <Banner status="critical">
+          <p>Error loading discount stack: {error.message}</p>
+        </Banner>
+        <HorizontalStack align="end">
+          <Button onClick={() => navigate('/discount-stacks')}>
+            Back to Discount Stacks
+          </Button>
+        </HorizontalStack>
+      </Page>
+    );
+  }
+
   return (
     <Page
-      title="Create Discount Stack"
+      title="Edit Discount Stack"
       breadcrumbs={[
         { content: 'Discount Stacks', url: '/discount-stacks' },
       ]}
@@ -168,9 +217,9 @@ function CreateDiscountStack() {
             <Button
               primary
               submit
-              loading={createDiscountStack.isLoading}
+              loading={updateDiscountStack.isLoading}
             >
-              Create Discount Stack
+              Update Discount Stack
             </Button>
           </HorizontalStack>
         </FormLayout>
@@ -179,4 +228,4 @@ function CreateDiscountStack() {
   );
 }
 
-export default CreateDiscountStack;
+export default EditDiscountStack;

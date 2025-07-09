@@ -5,8 +5,8 @@ import {
   Card,
   Text,
   Button,
-  Stack,
-  Heading,
+  HorizontalStack,
+  VerticalStack,
   Badge,
   DataTable,
 } from '@shopify/polaris';
@@ -15,12 +15,12 @@ import { useDiscountStacks } from '../hooks/useDiscountStacks';
 
 function Dashboard() {
   const navigate = useNavigate();
-  const { data: discountStacks, isLoading } = useDiscountStacks();
+  const { data: discountStacks, isLoading, error } = useDiscountStacks();
 
   const rows = discountStacks?.slice(0, 5).map(stack => [
     stack.name,
     stack.isActive ? <Badge status="success">Active</Badge> : <Badge>Inactive</Badge>,
-    stack.discounts.length,
+    stack.discounts?.length || 0,
     stack.usageCount || 0,
     <Button
       plain
@@ -42,13 +42,13 @@ function Dashboard() {
         <Layout.Section>
           <Card>
             <div style={{ padding: '20px' }}>
-              <Stack vertical spacing="loose">
-                <Heading>Welcome to Smart Discount Stack Manager</Heading>
+              <VerticalStack gap="5">
+                <Text variant="headingLg">Welcome to Smart Discount Stack Manager</Text>
                 <Text>
                   Create and manage complex discount combinations for your Shopify store.
                   Stack multiple discounts, set conditions, and track performance.
                 </Text>
-                <Stack>
+                <HorizontalStack>
                   <Button
                     primary
                     onClick={() => navigate('/discount-stacks/create')}
@@ -60,8 +60,8 @@ function Dashboard() {
                   >
                     View All Stacks
                   </Button>
-                </Stack>
-              </Stack>
+                </HorizontalStack>
+              </VerticalStack>
             </div>
           </Card>
         </Layout.Section>
@@ -69,10 +69,12 @@ function Dashboard() {
         <Layout.Section>
           <Card>
             <div style={{ padding: '20px' }}>
-              <Stack vertical spacing="loose">
-                <Heading>Recent Discount Stacks</Heading>
+              <VerticalStack gap="5">
+                <Text variant="headingLg">Recent Discount Stacks</Text>
                 {isLoading ? (
                   <Text>Loading...</Text>
+                ) : error ? (
+                  <Text>Unable to load discount stacks. Please check your connection.</Text>
                 ) : rows.length > 0 ? (
                   <DataTable
                     columnContentTypes={['text', 'text', 'numeric', 'numeric', 'text']}
@@ -82,7 +84,7 @@ function Dashboard() {
                 ) : (
                   <Text>No discount stacks created yet.</Text>
                 )}
-              </Stack>
+              </VerticalStack>
             </div>
           </Card>
         </Layout.Section>

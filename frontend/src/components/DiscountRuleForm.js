@@ -2,12 +2,13 @@ import React from 'react';
 import {
   Card,
   Button,
-  Stack,
+  HorizontalStack,
+  VerticalStack,
   FormLayout,
   TextField,
   Select,
   Checkbox,
-  Heading,
+  Text,
   Banner,
 } from '@shopify/polaris';
 
@@ -54,11 +55,11 @@ function DiscountRuleForm({ discounts, onChange, error }) {
   };
 
   return (
-    <Stack vertical spacing="loose">
-      <Stack distribution="equalSpacing" alignment="center">
-        <Heading>Discount Rules</Heading>
+    <VerticalStack gap="5">
+      <HorizontalStack align="space-between" blockAlign="center">
+        <Text variant="headingMd">Discount Rules</Text>
         <Button onClick={addDiscount}>Add Discount</Button>
-      </Stack>
+      </HorizontalStack>
 
       {error && (
         <Banner status="critical">
@@ -68,9 +69,9 @@ function DiscountRuleForm({ discounts, onChange, error }) {
 
       {discounts.map((discount, index) => (
         <Card key={discount.id} sectioned>
-          <Stack vertical spacing="loose">
-            <Stack distribution="equalSpacing" alignment="center">
-              <Heading size="small">Discount {index + 1}</Heading>
+          <VerticalStack gap="5">
+            <HorizontalStack align="space-between" blockAlign="center">
+              <Text variant="headingSm">Discount {index + 1}</Text>
               <Button
                 plain
                 destructive
@@ -78,7 +79,7 @@ function DiscountRuleForm({ discounts, onChange, error }) {
               >
                 Remove
               </Button>
-            </Stack>
+            </HorizontalStack>
 
             <FormLayout>
               <FormLayout.Group>
@@ -133,21 +134,21 @@ function DiscountRuleForm({ discounts, onChange, error }) {
                 </div>
               </FormLayout.Group>
             </FormLayout>
-          </Stack>
+          </VerticalStack>
         </Card>
       ))}
 
       {discounts.length === 0 && (
         <Card sectioned>
-          <Stack vertical spacing="loose" alignment="center">
-            <Heading>No discount rules added yet</Heading>
+          <VerticalStack gap="5" align="center">
+            <Text variant="headingMd">No discount rules added yet</Text>
             <Button primary onClick={addDiscount}>
               Add Your First Discount
             </Button>
-          </Stack>
+          </VerticalStack>
         </Card>
       )}
-    </Stack>
+    </VerticalStack>
   );
 }
 
