@@ -34,6 +34,14 @@ function validateDiscountStackData(name, discounts) {
 						`Discount ${index + 1}: Amount must be greater than 0`
 					);
 				}
+				if (
+					discount.type === 'free_shipping' &&
+					discount.value !== 0
+				) {
+					validationErrors.push(
+						`Discount ${index + 1}: Free shipping value should be 0`
+					);
+				}
 			}
 		});
 	}

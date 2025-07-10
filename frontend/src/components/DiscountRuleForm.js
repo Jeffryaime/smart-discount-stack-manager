@@ -17,6 +17,7 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
     { label: 'Percentage Off', value: 'percentage' },
     { label: 'Fixed Amount Off', value: 'fixed_amount' },
     { label: 'Buy X Get Y Free', value: 'buy_x_get_y' },
+    { label: 'Free Shipping', value: 'free_shipping' },
   ];
 
   const addDiscount = () => {
@@ -44,6 +45,9 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
     if ((type === 'fixed_amount' || type === 'buy_x_get_y') && value < 0) {
       return 'Amount must be greater than 0';
     }
+    if (type === 'free_shipping' && value !== 0) {
+      return 'Free shipping value should be 0';
+    }
     return null;
   };
 
@@ -54,6 +58,11 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
       updatedDiscounts[index][parent][child] = value;
     } else {
       updatedDiscounts[index][field] = value;
+    }
+    
+    // Auto-set value to 0 for free shipping
+    if (field === 'type' && value === 'free_shipping') {
+      updatedDiscounts[index].value = 0;
     }
     
     // Validate discount value
@@ -149,22 +158,30 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                     </div>
                     
                     <div style={{ flex: 1 }}>
-                      <TextField
-                        label={discount.type === 'percentage' ? 'Percentage Off' : 'Amount Off'}
-                        type="number"
-                        value={discount.value}
-                        onChange={(value) => updateDiscount(index, 'value', parseFloat(value) || 0)}
-                        suffix={discount.type === 'percentage' ? '%' : '$'}
-                        error={discount.error}
-                        helpText={
-                          discount.type === 'percentage' 
-                            ? "Enter 0-100 (e.g., 20 for 20% off)"
-                            : "Enter amount (e.g., 10 for $10 off)"
-                        }
-                        placeholder={
-                          discount.type === 'percentage' ? "20" : "10"
-                        }
-                      />
+                      {discount.type === 'free_shipping' ? (
+                        <div style={{ paddingTop: '24px' }}>
+                          <Text variant="bodySm" tone="subdued">
+                            Free shipping will be applied automatically - no value needed
+                          </Text>
+                        </div>
+                      ) : (
+                        <TextField
+                          label={discount.type === 'percentage' ? 'Percentage Off' : 'Amount Off'}
+                          type="number"
+                          value={discount.value}
+                          onChange={(value) => updateDiscount(index, 'value', parseFloat(value) || 0)}
+                          suffix={discount.type === 'percentage' ? '%' : '$'}
+                          error={discount.error}
+                          helpText={
+                            discount.type === 'percentage' 
+                              ? "Enter 0-100 (e.g., 20 for 20% off)"
+                              : "Enter amount (e.g., 10 for $10 off)"
+                          }
+                          placeholder={
+                            discount.type === 'percentage' ? "20" : "10"
+                          }
+                        />
+                      )}
                     </div>
                   </HorizontalStack>
 
