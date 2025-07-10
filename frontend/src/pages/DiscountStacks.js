@@ -34,6 +34,8 @@ function DiscountStacks() {
 	const [stackToDelete, setStackToDelete] = useState(null);
 	const [selectedResources, setSelectedResources] = useState([]);
 	const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+	const [errorModalOpen, setErrorModalOpen] = useState(false);
+	const [errorMessage, setErrorMessage] = useState('');
 
 	const handleDelete = (stack) => {
 		setStackToDelete(stack);
@@ -55,14 +57,22 @@ function DiscountStacks() {
 	};
 
 	const confirmBulkDelete = async () => {
-		const selectedIds = selectedResources.map(index => filteredStacks[index]._id);
-		
+		const selectedIds = selectedResources.map(
+			(index) => filteredStacks[index]._id
+		);
+
 		try {
 			await bulkDeleteDiscountStacks.mutateAsync(selectedIds);
 			setBulkDeleteModalOpen(false);
 			setSelectedResources([]);
 		} catch (error) {
 			console.error('Error deleting discount stacks:', error);
+			setErrorMessage(
+				error.response?.data?.message ||
+					error.message ||
+					'Failed to delete discount stacks. Please try again.'
+			);
+			setErrorModalOpen(true);
 		}
 	};
 
@@ -197,7 +207,9 @@ function DiscountStacks() {
 										<Button
 											size="slim"
 											onClick={handleSelectAll}
-											disabled={selectedResources.length === filteredStacks.length}
+											disabled={
+												selectedResources.length === filteredStacks.length
+											}
 										>
 											Select All
 										</Button>
@@ -211,7 +223,8 @@ function DiscountStacks() {
 									</HorizontalStack>
 									{selectedResources.length > 0 && (
 										<Text variant="bodySm" tone="subdued">
-											{selectedResources.length} of {filteredStacks.length} selected
+											{selectedResources.length} of {filteredStacks.length}{' '}
+											selected
 										</Text>
 									)}
 								</HorizontalStack>
@@ -322,24 +335,49 @@ function DiscountStacks() {
 				<Modal.Section>
 					<VerticalStack gap="4">
 						<Text variant="bodyMd">
-							Are you sure you want to delete the following {selectedResources.length} discount stacks? This action cannot be undone.
+							Are you sure you want to delete the following{' '}
+							{selectedResources.length} discount stacks? This action cannot be
+							undone.
 						</Text>
-						<div style={{ 
-							maxHeight: '200px', 
-							overflowY: 'auto', 
-							padding: '12px', 
-							backgroundColor: '#f6f6f7', 
-							borderRadius: '6px' 
-						}}>
+						<div
+							style={{
+								maxHeight: '200px',
+								overflowY: 'auto',
+								padding: '12px',
+								backgroundColor: '#f6f6f7',
+								borderRadius: '6px',
+							}}
+						>
 							<VerticalStack gap="2">
-								{selectedResources.map((index) => (
-									<Text key={index} variant="bodySm">
-										• {filteredStacks[index]?.name}
-									</Text>
-								))}
+								{selectedResources.map((index) => {
+									const stack = filteredStacks[index];
+									return (
+										<Text key={stack?._id || `stack-${index}`} variant="bodySm">
+											• {stack?.name}
+										</Text>
+									);
+								})}
 							</VerticalStack>
 						</div>
 					</VerticalStack>
+				</Modal.Section>
+			</Modal>
+
+			<Modal
+				open={errorModalOpen}
+				onClose={() => setErrorModalOpen(false)}
+				title="Error"
+				primaryAction={{
+					content: 'OK',
+					onAction: () => setErrorModalOpen(false),
+				}}
+			>
+				<Modal.Section>
+					<TextContainer>
+						<Text variant="bodyMd" tone="critical">
+							{errorMessage}
+						</Text>
+					</TextContainer>
 				</Modal.Section>
 			</Modal>
 		</Page>
