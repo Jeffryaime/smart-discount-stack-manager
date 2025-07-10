@@ -16,15 +16,66 @@ const discountController = {
   async createDiscountStack(req, res) {
     try {
       const { shop } = req.query;
-      const discountStack = new DiscountStack({
+      const { name, discounts } = req.body;
+      
+      // Validation
+      const validationErrors = [];
+      
+      if (!name || name.trim().length === 0) {
+        validationErrors.push('Name is required');
+      }
+      
+      if (!discounts || discounts.length === 0) {
+        validationErrors.push('At least one discount rule is required');
+      } else {
+        // Validate each discount rule
+        discounts.forEach((discount, index) => {
+          if (!discount.type) {
+            validationErrors.push(`Discount ${index + 1}: Type is required`);
+          }
+          
+          if (discount.value === undefined || discount.value === null) {
+            validationErrors.push(`Discount ${index + 1}: Value is required`);
+          } else {
+            if (discount.type === 'percentage' && (discount.value < 0 || discount.value > 100)) {
+              validationErrors.push(`Discount ${index + 1}: Percentage must be between 0 and 100`);
+            }
+            if ((discount.type === 'fixed_amount' || discount.type === 'buy_x_get_y') && discount.value < 0) {
+              validationErrors.push(`Discount ${index + 1}: Amount must be greater than 0`);
+            }
+          }
+        });
+      }
+      
+      if (validationErrors.length > 0) {
+        return res.status(400).json({ 
+          error: 'Validation failed', 
+          details: validationErrors 
+        });
+      }
+      
+      // Remove _id from discounts array to let MongoDB generate ObjectIds
+      const discountData = {
         ...req.body,
-        shop
-      });
+        shop,
+        discounts: req.body.discounts?.map(discount => {
+          const { _id, id, ...discountWithoutId } = discount;
+          return discountWithoutId;
+        }) || []
+      };
+      
+      const discountStack = new DiscountStack(discountData);
       
       const savedStack = await discountStack.save();
       res.status(201).json(savedStack);
     } catch (error) {
       console.error('Error creating discount stack:', error);
+      if (error.name === 'ValidationError') {
+        return res.status(400).json({ 
+          error: 'Validation failed', 
+          details: Object.values(error.errors).map(e => e.message) 
+        });
+      }
       res.status(500).json({ error: 'Failed to create discount stack' });
     }
   },
@@ -50,11 +101,57 @@ const discountController = {
     try {
       const { id } = req.params;
       const { shop } = req.query;
+      const { name, discounts } = req.body;
+      
+      // Validation (same as create)
+      const validationErrors = [];
+      
+      if (!name || name.trim().length === 0) {
+        validationErrors.push('Name is required');
+      }
+      
+      if (!discounts || discounts.length === 0) {
+        validationErrors.push('At least one discount rule is required');
+      } else {
+        // Validate each discount rule
+        discounts.forEach((discount, index) => {
+          if (!discount.type) {
+            validationErrors.push(`Discount ${index + 1}: Type is required`);
+          }
+          
+          if (discount.value === undefined || discount.value === null) {
+            validationErrors.push(`Discount ${index + 1}: Value is required`);
+          } else {
+            if (discount.type === 'percentage' && (discount.value < 0 || discount.value > 100)) {
+              validationErrors.push(`Discount ${index + 1}: Percentage must be between 0 and 100`);
+            }
+            if ((discount.type === 'fixed_amount' || discount.type === 'buy_x_get_y') && discount.value < 0) {
+              validationErrors.push(`Discount ${index + 1}: Amount must be greater than 0`);
+            }
+          }
+        });
+      }
+      
+      if (validationErrors.length > 0) {
+        return res.status(400).json({ 
+          error: 'Validation failed', 
+          details: validationErrors 
+        });
+      }
+      
+      // Remove _id from discounts array to let MongoDB generate ObjectIds
+      const updateData = {
+        ...req.body,
+        discounts: req.body.discounts?.map(discount => {
+          const { _id, id, ...discountWithoutId } = discount;
+          return discountWithoutId;
+        }) || []
+      };
       
       const discountStack = await DiscountStack.findOneAndUpdate(
         { _id: id, shop },
-        req.body,
-        { new: true }
+        updateData,
+        { new: true, runValidators: true }
       );
       
       if (!discountStack) {
@@ -64,6 +161,12 @@ const discountController = {
       res.json(discountStack);
     } catch (error) {
       console.error('Error updating discount stack:', error);
+      if (error.name === 'ValidationError') {
+        return res.status(400).json({ 
+          error: 'Validation failed', 
+          details: Object.values(error.errors).map(e => e.message) 
+        });
+      }
       res.status(500).json({ error: 'Failed to update discount stack' });
     }
   },
