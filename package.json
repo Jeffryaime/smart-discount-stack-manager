@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
 		"backend:dev": "cd backend && npm run dev",
-		"frontend:dev": "cd frontend && PORT=3003 npm start",
+		"frontend:dev": "cd frontend && cross-env PORT=3003 npm start",
 		"backend:install": "cd backend && npm install",
 		"frontend:install": "cd frontend && npm install",
 		"install:all": "npm run backend:install && npm run frontend:install",
@@ -19,6 +19,7 @@
 	},
 	"devDependencies": {
 		"concurrently": "^8.0.0",
+		"cross-env": "^7.0.3",
 		"@shopify/cli": "^3.0.0",
 		"@shopify/theme": "^3.0.0"
 	},

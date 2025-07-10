@@ -29,13 +29,26 @@ const discountController = {
 				});
 			}
 
-			// Remove _id from discounts array to let MongoDB generate ObjectIds
+			// Remove _id from discounts array and handle BOGO config
 			const discountData = {
 				...req.body,
 				shop,
 				discounts:
 					req.body.discounts?.map((discount) => {
 						const { _id, id, ...discountWithoutId } = discount;
+						
+						// Initialize bogoConfig for BOGO discounts
+						if (discountWithoutId.type === 'buy_x_get_y') {
+							discountWithoutId.bogoConfig = {
+								buyQuantity: discountWithoutId.bogoConfig?.buyQuantity || discountWithoutId.value || 1,
+								getQuantity: discountWithoutId.bogoConfig?.getQuantity || 1,
+								eligibleProductIds: discountWithoutId.bogoConfig?.eligibleProductIds || [],
+								freeProductIds: discountWithoutId.bogoConfig?.freeProductIds || [],
+								limitPerOrder: discountWithoutId.bogoConfig?.limitPerOrder || null,
+								...discountWithoutId.bogoConfig
+							};
+						}
+						
 						return discountWithoutId;
 					}) || [],
 			};
@@ -102,7 +115,7 @@ const discountController = {
 				}
 			}
 
-			// Remove _id from discounts array to let MongoDB generate ObjectIds
+			// Remove _id from discounts array and handle BOGO config
 			const updateData = isStatusUpdate
 				? req.body
 				: {
@@ -110,6 +123,19 @@ const discountController = {
 						discounts:
 							req.body.discounts?.map((discount) => {
 								const { _id, id, ...discountWithoutId } = discount;
+								
+								// Initialize bogoConfig for BOGO discounts
+								if (discountWithoutId.type === 'buy_x_get_y') {
+									discountWithoutId.bogoConfig = {
+										buyQuantity: discountWithoutId.bogoConfig?.buyQuantity || discountWithoutId.value || 1,
+										getQuantity: discountWithoutId.bogoConfig?.getQuantity || 1,
+										eligibleProductIds: discountWithoutId.bogoConfig?.eligibleProductIds || [],
+										freeProductIds: discountWithoutId.bogoConfig?.freeProductIds || [],
+										limitPerOrder: discountWithoutId.bogoConfig?.limitPerOrder || null,
+										...discountWithoutId.bogoConfig
+									};
+								}
+								
 								return discountWithoutId;
 							}) || [],
 				  };

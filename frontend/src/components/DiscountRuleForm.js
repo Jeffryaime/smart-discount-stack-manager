@@ -46,16 +46,38 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
   };
 
   const validateDiscountValue = (type, value) => {
-    if (type === 'percentage' && (value < 0 || value > 100)) {
-      return 'Percentage must be between 0 and 100';
+    if (type === 'percentage' && (value <= 0 || value > 100)) {
+      return 'Percentage must be between 1 and 100';
     }
-    if ((type === 'fixed_amount' || type === 'buy_x_get_y') && value < 0) {
+    if ((type === 'fixed_amount' || type === 'buy_x_get_y') && value <= 0) {
       return 'Amount must be greater than 0';
     }
     if (type === 'free_shipping' && value !== 0) {
       return 'Free shipping value should be 0';
     }
     return null;
+  };
+
+  const validateAndParseProductIds = (inputValue) => {
+    if (!inputValue || inputValue.trim() === '') {
+      return [];
+    }
+    
+    // Split by comma, trim whitespace, and filter out empty strings
+    const rawIds = inputValue.split(',').map(id => id.trim()).filter(id => id.length > 0);
+    
+    // Validate each ID format (Shopify product IDs are typically numeric or gid://shopify/Product/123)
+    const productIdRegex = /^(?:\d+|gid:\/\/shopify\/Product\/\d+)$/;
+    
+    const validIds = rawIds.filter(id => {
+      if (!productIdRegex.test(id)) {
+        console.warn(`Invalid product ID format: "${id}". Expected numeric ID or Shopify GID format.`);
+        return false;
+      }
+      return true;
+    });
+    
+    return validIds;
   };
 
   const updateDiscount = (index, field, value) => {
@@ -226,7 +248,7 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                           error={discount.error}
                           helpText={
                             discount.type === 'percentage' 
-                              ? "Enter 0-100 (e.g., 20 for 20% off)"
+                              ? "Enter 1-100 (e.g., 20 for 20% off)"
                               : "Enter amount (e.g., 10 for $10 off)"
                           }
                         />
@@ -268,18 +290,18 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                               <TextField
                                 label="Eligible Product IDs"
                                 value={discount.bogoConfig?.eligibleProductIds?.join(', ') || ''}
-                                onChange={(value) => updateDiscount(index, 'bogoConfig.eligibleProductIds', value ? value.split(',').map(id => id.trim()) : [])}
-                                helpText="Product IDs for X items (comma separated)"
-                                placeholder="e.g., 123, 456, 789"
+                                onChange={(value) => updateDiscount(index, 'bogoConfig.eligibleProductIds', validateAndParseProductIds(value))}
+                                helpText="Product IDs for X items (comma separated) - numeric or gid://shopify/Product/123 format"
+                                placeholder="e.g., 123, 456, gid://shopify/Product/789"
                               />
                             </div>
                             <div style={{ flex: 1 }}>
                               <TextField
                                 label="Free Product IDs"
                                 value={discount.bogoConfig?.freeProductIds?.join(', ') || ''}
-                                onChange={(value) => updateDiscount(index, 'bogoConfig.freeProductIds', value ? value.split(',').map(id => id.trim()) : [])}
-                                helpText="Product IDs for Y free items (comma separated)"
-                                placeholder="e.g., 123, 456, 789"
+                                onChange={(value) => updateDiscount(index, 'bogoConfig.freeProductIds', validateAndParseProductIds(value))}
+                                helpText="Product IDs for Y free items (comma separated) - numeric or gid://shopify/Product/123 format"
+                                placeholder="e.g., 123, 456, gid://shopify/Product/789"
                               />
                             </div>
                           </HorizontalStack>

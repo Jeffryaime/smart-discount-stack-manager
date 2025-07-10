@@ -13,8 +13,7 @@ const discountRuleSchema = new mongoose.Schema({
   // Enhanced BOGO configuration
   bogoConfig: {
     buyQuantity: {
-      type: Number,
-      default: function() { return this.type === 'buy_x_get_y' ? this.value : undefined; }
+      type: Number
     },
     getQuantity: {
       type: Number,

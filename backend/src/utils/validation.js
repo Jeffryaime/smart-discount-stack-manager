@@ -19,10 +19,10 @@ function validateDiscountStackData(name, discounts) {
 			} else {
 				if (
 					discount.type === 'percentage' &&
-					(discount.value < 0 || discount.value > 100)
+					(discount.value <= 0 || discount.value > 100)
 				) {
 					validationErrors.push(
-						`Discount ${index + 1}: Percentage must be between 0 and 100`
+						`Discount ${index + 1}: Percentage must be between 1 and 100`
 					);
 				}
 				if (
