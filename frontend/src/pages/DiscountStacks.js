@@ -16,7 +16,7 @@ import {
 	Popover,
 	ActionList,
 } from '@shopify/polaris';
-import { EditMajor, DeleteMajor, CircleTickMajor, CircleCancelMajor } from '@shopify/polaris-icons';
+import { EditMajor, DeleteMajor, CircleTickMajor, CircleCancelMajor, PlayMajor } from '@shopify/polaris-icons';
 import { useNavigate } from 'react-router-dom';
 import {
 	useDiscountStacks,
@@ -24,6 +24,8 @@ import {
 	useBulkDeleteDiscountStacks,
 	useBulkUpdateDiscountStacks,
 } from '../hooks/useDiscountStacks';
+import TestDiscountModal from '../components/TestDiscountModal';
+import { discountStacksApi } from '../services/api';
 
 function DiscountStacks() {
 	const navigate = useNavigate();
@@ -41,6 +43,8 @@ function DiscountStacks() {
 	const [errorModalOpen, setErrorModalOpen] = useState(false);
 	const [errorMessage, setErrorMessage] = useState('');
 	const [moreActionsOpen, setMoreActionsOpen] = useState(false);
+	const [testModalOpen, setTestModalOpen] = useState(false);
+	const [stackToTest, setStackToTest] = useState(null);
 
 	const handleDelete = (stack) => {
 		setStackToDelete(stack);
@@ -145,6 +149,18 @@ function DiscountStacks() {
 		setSelectedResources(allIndices);
 	};
 
+	const handleTestDiscount = async (testData) => {
+		if (!stackToTest) return;
+		
+		try {
+			const result = await discountStacksApi.test(stackToTest._id, testData);
+			return result;
+		} catch (error) {
+			console.error('Error testing discount stack:', error);
+			throw error;
+		}
+	};
+
 	const handleDeselectAll = () => {
 		setSelectedResources([]);
 	};
@@ -182,6 +198,15 @@ function DiscountStacks() {
 		stack.discounts.length,
 		stack.usageCount || 0,
 		<HorizontalStack gap="2">
+			<Button
+				plain
+				onClick={() => {
+					setStackToTest(stack);
+					setTestModalOpen(true);
+				}}
+				accessibilityLabel="Test discount stack"
+				icon={<Icon source={PlayMajor} />}
+			/>
 			<Button
 				plain
 				onClick={() => navigate(`/discount-stacks/${stack._id}/edit`)}
@@ -469,6 +494,18 @@ function DiscountStacks() {
 					</TextContainer>
 				</Modal.Section>
 			</Modal>
+
+			{stackToTest && (
+				<TestDiscountModal
+					open={testModalOpen}
+					onClose={() => {
+						setTestModalOpen(false);
+						setStackToTest(null);
+					}}
+					discountStack={stackToTest}
+					onTest={handleTestDiscount}
+				/>
+			)}
 		</Page>
 	);
 }

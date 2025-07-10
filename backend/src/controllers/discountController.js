@@ -168,12 +168,170 @@ const discountController = {
 				return res.status(404).json({ error: 'Discount stack not found' });
 			}
 
-			// Simulate discount calculation
+			// Only process active discount stack
+			if (!discountStack.isActive) {
+				return res.status(400).json({ error: 'Discount stack is not active' });
+			}
+
+			// Check date validity
+			const now = new Date();
+			if (discountStack.startDate && now < new Date(discountStack.startDate)) {
+				return res.status(400).json({ error: 'Discount stack has not started yet' });
+			}
+			if (discountStack.endDate && now > new Date(discountStack.endDate)) {
+				return res.status(400).json({ error: 'Discount stack has expired' });
+			}
+
+			// Log the received test data for debugging
+			console.log('Received testData:', testData);
+			
+			// Calculate discounts
+			const appliedDiscounts = [];
+			let currentPrice = testData.originalPrice;
+			let shippingCost = testData.shippingCost || 0;
+			let originalShippingCost = shippingCost;
+			let freeShippingApplied = false;
+			let totalDiscountAmount = 0;
+
+			// Sort discounts by priority (lower numbers have higher priority)
+			const sortedDiscounts = [...discountStack.discounts]
+				.filter(discount => discount.isActive)
+				.sort((a, b) => (a.priority || 0) - (b.priority || 0));
+
+			for (const discount of sortedDiscounts) {
+				const conditions = discount.conditions || {};
+				console.log('Checking discount:', {
+					type: discount.type,
+					value: discount.value,
+					conditions: conditions,
+					testQuantity: testData.quantity,
+					testAmount: testData.originalPrice
+				});
+				
+				// Check minimum amount condition
+				if (conditions.minimumAmount && testData.originalPrice < conditions.minimumAmount) {
+					continue;
+				}
+
+				// Check minimum quantity condition
+				if (conditions.minimumQuantity && testData.quantity < conditions.minimumQuantity) {
+					console.log(`Skipping discount due to quantity check: ${testData.quantity} < ${conditions.minimumQuantity}`);
+					continue;
+				}
+
+				// Check product IDs condition
+				if (conditions.productIds && conditions.productIds.length > 0) {
+					const hasMatchingProduct = testData.productIds?.some(productId => 
+						conditions.productIds.includes(productId)
+					);
+					if (!hasMatchingProduct) continue;
+				}
+
+				// Check collection IDs condition
+				if (conditions.collectionIds && conditions.collectionIds.length > 0) {
+					const hasMatchingCollection = testData.collectionIds?.some(collectionId => 
+						conditions.collectionIds.includes(collectionId)
+					);
+					if (!hasMatchingCollection) continue;
+				}
+
+				// Check customer segment condition
+				if (conditions.customerSegments && conditions.customerSegments.length > 0) {
+					if (!testData.customerSegment || 
+						!conditions.customerSegments.includes(testData.customerSegment)) {
+						continue;
+					}
+				}
+
+				// Apply discount based on type
+				let discountAmount = 0;
+				let appliedDiscount = {
+					...discount.toObject(),
+					appliedAmount: 0
+				};
+
+				switch (discount.type) {
+					case 'percentage':
+						discountAmount = currentPrice * (discount.value / 100);
+						appliedDiscount.appliedAmount = discountAmount;
+						break;
+					
+					case 'fixed_amount':
+						discountAmount = Math.min(discount.value, currentPrice);
+						appliedDiscount.appliedAmount = discountAmount;
+						break;
+					
+					case 'free_shipping':
+						// Free shipping removes shipping cost
+						if (shippingCost > 0) {
+							appliedDiscount.appliedAmount = shippingCost;
+							appliedDiscount.freeShipping = true;
+							freeShippingApplied = true;
+							// Don't add to totalDiscountAmount here - we'll add it later
+							shippingCost = 0;
+						}
+						break;
+					
+					case 'buy_x_get_y':
+						// Simple BOGO calculation
+						if (testData.quantity >= discount.value) {
+							const freeItems = Math.floor(testData.quantity / (discount.value + 1));
+							const pricePerItem = testData.originalPrice / testData.quantity;
+							discountAmount = freeItems * pricePerItem;
+							appliedDiscount.appliedAmount = discountAmount;
+							appliedDiscount.freeItems = freeItems;
+						}
+						break;
+				}
+
+				if (discountAmount > 0 || (discount.type === 'free_shipping' && appliedDiscount.freeShipping)) {
+					currentPrice -= discountAmount;
+					// Only add to totalDiscountAmount if it's not free shipping (free shipping is handled separately)
+					if (discount.type !== 'free_shipping') {
+						totalDiscountAmount += discountAmount;
+					}
+					appliedDiscounts.push(appliedDiscount);
+				}
+			}
+
+			// Ensure final price is not negative
+			currentPrice = Math.max(0, currentPrice);
+
+			// Calculate proper discount amounts
+			const productDiscountAmount = totalDiscountAmount;
+			const shippingDiscountAmount = freeShippingApplied ? originalShippingCost : 0;
+			const totalDiscountAmountCombined = productDiscountAmount + shippingDiscountAmount;
+			
+			console.log('Discount calculation:', {
+				productDiscountAmount,
+				shippingDiscountAmount,
+				totalDiscountAmountCombined,
+				originalPrice: testData.originalPrice,
+				originalShippingCost
+			});
+
+			// Calculate taxes (applied to final price + shipping, after discounts)
+			const taxableAmount = currentPrice + shippingCost;
+			const taxAmount = taxableAmount * (testData.taxRate || 0);
+			const finalTotalWithTax = taxableAmount + taxAmount;
+
 			const result = {
 				originalPrice: testData.originalPrice,
-				finalPrice: testData.originalPrice * 0.8, // Example calculation
-				appliedDiscounts: discountStack.discounts,
-				savings: testData.originalPrice * 0.2,
+				finalPrice: currentPrice,
+				shippingCost: shippingCost,
+				originalShippingCost: originalShippingCost,
+				freeShippingApplied: freeShippingApplied,
+				taxRate: testData.taxRate || 0,
+				taxAmount: taxAmount,
+				subtotal: currentPrice + shippingCost,
+				finalTotal: finalTotalWithTax,
+				appliedDiscounts: appliedDiscounts,
+				productDiscountAmount: productDiscountAmount,
+				shippingDiscountAmount: shippingDiscountAmount,
+				totalDiscountAmount: totalDiscountAmountCombined,
+				savingsPercentage: testData.originalPrice > 0 
+					? Math.round((totalDiscountAmountCombined / (testData.originalPrice + originalShippingCost)) * 100) 
+					: 0
 			};
 
 			res.json(result);

@@ -26,8 +26,8 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
       type: 'percentage',
       value: 0,
       conditions: {
-        minimumAmount: '',
-        minimumQuantity: '',
+        minimumAmount: null,
+        minimumQuantity: null,
         productIds: [],
         collectionIds: [],
       },
@@ -55,7 +55,12 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
     const updatedDiscounts = [...discounts];
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
-      updatedDiscounts[index][parent][child] = value;
+      // Convert to number for numeric fields
+      if ((child === 'minimumAmount' || child === 'minimumQuantity') && value !== '') {
+        updatedDiscounts[index][parent][child] = Number(value);
+      } else {
+        updatedDiscounts[index][parent][child] = value;
+      }
     } else {
       updatedDiscounts[index][field] = value;
     }
@@ -193,7 +198,7 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                           <TextField
                             label="Minimum Cart Amount"
                             type="number"
-                            value={discount.conditions.minimumAmount}
+                            value={discount.conditions.minimumAmount || ''}
                             onChange={(value) => updateDiscount(index, 'conditions.minimumAmount', value)}
                             prefix="$"
                             helpText="Customer must spend at least this amount"
@@ -205,7 +210,7 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                           <TextField
                             label="Minimum Item Quantity"
                             type="number"
-                            value={discount.conditions.minimumQuantity}
+                            value={discount.conditions.minimumQuantity || ''}
                             onChange={(value) => updateDiscount(index, 'conditions.minimumQuantity', value)}
                             helpText="Customer must have at least this many items"
                             placeholder="2"
