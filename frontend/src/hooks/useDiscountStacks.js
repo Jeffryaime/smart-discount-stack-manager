@@ -51,6 +51,22 @@ export const useDeleteDiscountStack = () => {
   });
 };
 
+export const useBulkDeleteDiscountStacks = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation(
+    async (ids) => {
+      const deletePromises = ids.map(id => discountStacksApi.delete(id));
+      return Promise.all(deletePromises);
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('discountStacks');
+      },
+    }
+  );
+};
+
 export const useTestDiscountStack = () => {
   return useMutation(
     ({ id, testData }) => discountStacksApi.test(id, testData)
