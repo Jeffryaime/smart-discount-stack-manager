@@ -72,7 +72,8 @@ const TestDiscountModal = ({ open, onClose, discountStack, onTest }) => {
       setResults(result);
     } catch (error) {
       console.error('Test failed:', error);
-      setErrors({ general: 'Failed to run test. Please try again.' });
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to run test. Please try again.';
+      setErrors({ general: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -312,9 +313,14 @@ const TestDiscountModal = ({ open, onClose, discountStack, onTest }) => {
                                     ? `$${discount.value} off`
                                     : discount.type === 'free_shipping'
                                     ? 'Free Shipping'
-                                    : discount.freeItems 
-                                    ? `Buy ${discount.value} Get ${discount.freeItems} Free`
-                                    : `Buy ${discount.value} Get 1`
+                                    : discount.type === 'buy_x_get_y'
+                                    ? (() => {
+                                        const buyQty = discount.bogoDetails?.buyQuantity || discount.value || 1;
+                                        const getQty = discount.bogoDetails?.getQuantity || 1;
+                                        const freeItems = discount.freeItems || 0;
+                                        return `Buy ${buyQty} Get ${getQty} Free${freeItems > 0 ? ` (${freeItems} free items)` : ''}`;
+                                      })()
+                                    : `${discount.value} discount`
                                   }
                                 </Text>
                               </HorizontalStack>
@@ -332,6 +338,14 @@ const TestDiscountModal = ({ open, onClose, discountStack, onTest }) => {
                                 {discount.conditions.minimumAmount && `Min: ${formatCurrency(discount.conditions.minimumAmount)}`}
                                 {discount.conditions.minimumQuantity && ` • Min Qty: ${discount.conditions.minimumQuantity}`}
                                 {discount.priority !== undefined && ` • Priority: ${discount.priority}`}
+                              </Text>
+                            )}
+                            {discount.type === 'buy_x_get_y' && discount.bogoDetails && (
+                              <Text variant="bodySm" color="subdued">
+                                Buy {discount.bogoDetails.buyQuantity} Get {discount.bogoDetails.getQuantity} • 
+                                Complete Sets: {discount.bogoDetails.completeSets} • 
+                                Extra Free: {discount.bogoDetails.extraFreeItems}
+                                {discount.bogoDetails.limitApplied && ' • Limit Applied'}
                               </Text>
                             )}
                           </VerticalStack>

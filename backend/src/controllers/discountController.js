@@ -273,13 +273,62 @@ const discountController = {
 						break;
 					
 					case 'buy_x_get_y':
-						// Simple BOGO calculation
-						if (testData.quantity >= discount.value) {
-							const freeItems = Math.floor(testData.quantity / (discount.value + 1));
-							const pricePerItem = testData.originalPrice / testData.quantity;
-							discountAmount = freeItems * pricePerItem;
-							appliedDiscount.appliedAmount = discountAmount;
-							appliedDiscount.freeItems = freeItems;
+						// Enhanced BOGO calculation using bogoConfig
+						const buyQuantity = discount.bogoConfig?.buyQuantity || discount.value || 1;
+						const getQuantity = discount.bogoConfig?.getQuantity || 1;
+						const limitPerOrder = discount.bogoConfig?.limitPerOrder || null;
+						
+						console.log('Enhanced BOGO Debug:', {
+							quantity: testData.quantity,
+							buyQuantity: buyQuantity,
+							getQuantity: getQuantity,
+							limitPerOrder: limitPerOrder,
+							meetsCondition: testData.quantity >= buyQuantity
+						});
+						
+						if (testData.quantity >= buyQuantity) {
+							// Calculate how many complete "buy X get Y" sets we have
+							const completeSets = Math.floor(testData.quantity / (buyQuantity + getQuantity));
+							const freeItemsFromCompleteSets = completeSets * getQuantity;
+							
+							// Handle remainder: if we have extra items that don't form a complete set
+							// but still meet the minimum buy requirement
+							const remainderItems = testData.quantity % (buyQuantity + getQuantity);
+							const extraFreeItems = remainderItems >= buyQuantity ? Math.floor(remainderItems / buyQuantity) * getQuantity : 0;
+							
+							let totalFreeItems = freeItemsFromCompleteSets + extraFreeItems;
+							
+							// Apply per-order limit if specified
+							if (limitPerOrder && totalFreeItems > limitPerOrder) {
+								totalFreeItems = limitPerOrder;
+							}
+							
+							if (totalFreeItems > 0) {
+								const pricePerItem = testData.originalPrice / testData.quantity;
+								discountAmount = totalFreeItems * pricePerItem;
+								appliedDiscount.appliedAmount = discountAmount;
+								appliedDiscount.freeItems = totalFreeItems;
+								appliedDiscount.bogoDetails = {
+									buyQuantity,
+									getQuantity,
+									completeSets,
+									remainderItems,
+									extraFreeItems,
+									limitApplied: limitPerOrder && (freeItemsFromCompleteSets + extraFreeItems) > limitPerOrder
+								};
+								
+								console.log('Enhanced BOGO Calculation:', {
+									completeSets,
+									freeItemsFromCompleteSets,
+									remainderItems,
+									extraFreeItems,
+									totalFreeItems,
+									pricePerItem,
+									discountAmount,
+									limitPerOrder,
+									limitApplied: appliedDiscount.bogoDetails.limitApplied
+								});
+							}
 						}
 						break;
 				}

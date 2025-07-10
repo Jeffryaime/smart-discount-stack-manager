@@ -7,7 +7,7 @@ const connectDB = require('./config/database');
 const redisClient = require('./config/redis');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(helmet());

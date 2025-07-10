@@ -10,6 +10,29 @@ const discountRuleSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  // Enhanced BOGO configuration
+  bogoConfig: {
+    buyQuantity: {
+      type: Number,
+      default: function() { return this.type === 'buy_x_get_y' ? this.value : undefined; }
+    },
+    getQuantity: {
+      type: Number,
+      default: 1
+    },
+    eligibleProductIds: {
+      type: [String],
+      default: []
+    },
+    freeProductIds: {
+      type: [String], 
+      default: []
+    },
+    limitPerOrder: {
+      type: Number,
+      default: null
+    }
+  },
   conditions: {
     minimumAmount: Number,
     minimumQuantity: Number,

@@ -25,6 +25,13 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
       id: Date.now().toString(),
       type: 'percentage',
       value: 0,
+      bogoConfig: {
+        buyQuantity: 1,
+        getQuantity: 1,
+        eligibleProductIds: [],
+        freeProductIds: [],
+        limitPerOrder: null
+      },
       conditions: {
         minimumAmount: null,
         minimumQuantity: null,
@@ -58,6 +65,11 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
       // Convert to number for numeric fields
       if ((child === 'minimumAmount' || child === 'minimumQuantity') && value !== '') {
         updatedDiscounts[index][parent][child] = Number(value);
+      } else if (parent === 'bogoConfig' && (child === 'buyQuantity' || child === 'getQuantity') && value !== '') {
+        updatedDiscounts[index][parent][child] = Number(value);
+      } else if (parent === 'bogoConfig' && child === 'limitPerOrder') {
+        // Handle limitPerOrder specially - empty string should become null
+        updatedDiscounts[index][parent][child] = value === '' || value === null || value === undefined ? null : Number(value);
       } else {
         updatedDiscounts[index][parent][child] = value;
       }
@@ -68,6 +80,14 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
     // Auto-set value to 0 for free shipping
     if (field === 'type' && value === 'free_shipping') {
       updatedDiscounts[index].value = 0;
+    }
+    
+    // For BOGO, sync value with buyQuantity in bogoConfig
+    if (field === 'value' && updatedDiscounts[index].type === 'buy_x_get_y') {
+      updatedDiscounts[index].bogoConfig.buyQuantity = Number(value) || 1;
+    }
+    if (field === 'bogoConfig.buyQuantity') {
+      updatedDiscounts[index].value = Number(value) || 1;
     }
     
     // Validate discount value
@@ -137,7 +157,7 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                   <VerticalStack gap="1">
                     <Text variant="headingSm">Discount Rule #{index + 1}</Text>
                     <Text variant="bodySm" tone="subdued">
-                      Priority: {discount.priority + 1} (higher numbers apply first)
+                      Priority: {discount.priority} (lower numbers apply first)
                     </Text>
                   </VerticalStack>
                   <Button
@@ -169,9 +189,36 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                             Free shipping will be applied automatically - no value needed
                           </Text>
                         </div>
+                      ) : discount.type === 'buy_x_get_y' ? (
+                        <HorizontalStack gap="4">
+                          <div style={{ flex: 1 }}>
+                            <TextField
+                              label="Buy Quantity (X)"
+                              type="number"
+                              value={discount.bogoConfig?.buyQuantity || discount.value || 1}
+                              onChange={(value) => updateDiscount(index, 'bogoConfig.buyQuantity', parseInt(value) || 1)}
+                              helpText="How many items to buy"
+                              min="1"
+                            />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <TextField
+                              label="Get Quantity (Y)"
+                              type="number"
+                              value={discount.bogoConfig?.getQuantity || 1}
+                              onChange={(value) => updateDiscount(index, 'bogoConfig.getQuantity', parseInt(value) || 1)}
+                              helpText="How many items they get free"
+                              min="1"
+                            />
+                          </div>
+                        </HorizontalStack>
                       ) : (
                         <TextField
-                          label={discount.type === 'percentage' ? 'Percentage Off' : 'Amount Off'}
+                          label={
+                            discount.type === 'percentage' 
+                              ? 'Percentage Off'
+                              : 'Amount Off'
+                          }
                           type="number"
                           value={discount.value}
                           onChange={(value) => updateDiscount(index, 'value', parseFloat(value) || 0)}
@@ -181,9 +228,6 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                             discount.type === 'percentage' 
                               ? "Enter 0-100 (e.g., 20 for 20% off)"
                               : "Enter amount (e.g., 10 for $10 off)"
-                          }
-                          placeholder={
-                            discount.type === 'percentage' ? "20" : "10"
                           }
                         />
                       )}
@@ -202,7 +246,6 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                             onChange={(value) => updateDiscount(index, 'conditions.minimumAmount', value)}
                             prefix="$"
                             helpText="Customer must spend at least this amount"
-                            placeholder="50"
                           />
                         </div>
                         
@@ -213,10 +256,45 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                             value={discount.conditions.minimumQuantity || ''}
                             onChange={(value) => updateDiscount(index, 'conditions.minimumQuantity', value)}
                             helpText="Customer must have at least this many items"
-                            placeholder="2"
                           />
                         </div>
                       </HorizontalStack>
+                      
+                      {discount.type === 'buy_x_get_y' && (
+                        <VerticalStack gap="4">
+                          <Text variant="bodySm" tone="subdued">BOGO Specific Options</Text>
+                          <HorizontalStack gap="4">
+                            <div style={{ flex: 1 }}>
+                              <TextField
+                                label="Eligible Product IDs"
+                                value={discount.bogoConfig?.eligibleProductIds?.join(', ') || ''}
+                                onChange={(value) => updateDiscount(index, 'bogoConfig.eligibleProductIds', value ? value.split(',').map(id => id.trim()) : [])}
+                                helpText="Product IDs for X items (comma separated)"
+                                placeholder="e.g., 123, 456, 789"
+                              />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <TextField
+                                label="Free Product IDs"
+                                value={discount.bogoConfig?.freeProductIds?.join(', ') || ''}
+                                onChange={(value) => updateDiscount(index, 'bogoConfig.freeProductIds', value ? value.split(',').map(id => id.trim()) : [])}
+                                helpText="Product IDs for Y free items (comma separated)"
+                                placeholder="e.g., 123, 456, 789"
+                              />
+                            </div>
+                          </HorizontalStack>
+                          <div style={{ width: '50%' }}>
+                            <TextField
+                              label="Limit Per Order"
+                              type="number"
+                              value={discount.bogoConfig?.limitPerOrder === null || discount.bogoConfig?.limitPerOrder === undefined ? '' : discount.bogoConfig.limitPerOrder}
+                              onChange={(value) => updateDiscount(index, 'bogoConfig.limitPerOrder', value)}
+                              helpText="Maximum free items per order (leave empty for no limit)"
+                              placeholder="e.g., 2"
+                            />
+                          </div>
+                        </VerticalStack>
+                      )}
                     </VerticalStack>
                   </div>
 

@@ -1,34 +1,34 @@
 {
-  "name": "smart-discount-stack-manager",
-  "version": "1.0.0",
-  "description": "Smart Discount Stack Manager Shopify App",
-  "main": "backend/src/app.js",
-  "scripts": {
-    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
-    "backend:dev": "cd backend && npm run dev",
-    "frontend:dev": "cd frontend && PORT=3002 npm start",
-    "backend:install": "cd backend && npm install",
-    "frontend:install": "cd frontend && npm install",
-    "install:all": "npm run backend:install && npm run frontend:install",
-    "build": "cd frontend && npm run build",
-    "start": "cd backend && npm start",
-    "test": "concurrently \"npm run backend:test\" \"npm run frontend:test\"",
-    "backend:test": "cd backend && npm test",
-    "frontend:test": "cd frontend && npm test",
-    "shopify": "shopify app"
-  },
-  "devDependencies": {
-    "concurrently": "^8.0.0",
-    "@shopify/cli": "^3.0.0",
-    "@shopify/theme": "^3.0.0"
-  },
-  "keywords": [
-    "shopify",
-    "app",
-    "discount",
-    "stack",
-    "manager"
-  ],
-  "author": "",
-  "license": "MIT"
+	"name": "smart-discount-stack-manager",
+	"version": "1.0.0",
+	"description": "Smart Discount Stack Manager Shopify App",
+	"main": "backend/src/app.js",
+	"scripts": {
+		"dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+		"backend:dev": "cd backend && npm run dev",
+		"frontend:dev": "cd frontend && PORT=3003 npm start",
+		"backend:install": "cd backend && npm install",
+		"frontend:install": "cd frontend && npm install",
+		"install:all": "npm run backend:install && npm run frontend:install",
+		"build": "cd frontend && npm run build",
+		"start": "cd backend && npm start",
+		"test": "concurrently \"npm run backend:test\" \"npm run frontend:test\"",
+		"backend:test": "cd backend && npm test",
+		"frontend:test": "cd frontend && npm test",
+		"shopify": "shopify app"
+	},
+	"devDependencies": {
+		"concurrently": "^8.0.0",
+		"@shopify/cli": "^3.0.0",
+		"@shopify/theme": "^3.0.0"
+	},
+	"keywords": [
+		"shopify",
+		"app",
+		"discount",
+		"stack",
+		"manager"
+	],
+	"author": "",
+	"license": "MIT"
 }
