@@ -12,7 +12,12 @@ import {
   TextField,
   Modal,
   TextContainer,
+  Icon,
 } from '@shopify/polaris';
+import {
+  EditMajor,
+  DeleteMajor,
+} from '@shopify/polaris-icons';
 import { useNavigate } from 'react-router-dom';
 import { useDiscountStacks, useDeleteDiscountStack } from '../hooks/useDiscountStacks';
 
@@ -60,20 +65,20 @@ function DiscountStacks() {
     stack.isActive ? <Badge status="success">Active</Badge> : <Badge>Inactive</Badge>,
     stack.discounts.length,
     stack.usageCount || 0,
-    <HorizontalStack>
+    <HorizontalStack gap="2">
       <Button
         plain
         onClick={() => navigate(`/discount-stacks/${stack._id}/edit`)}
-      >
-        Edit
-      </Button>
+        accessibilityLabel="Edit discount stack"
+        icon={<Icon source={EditMajor} />}
+      />
       <Button
         plain
         destructive
         onClick={() => handleDelete(stack)}
-      >
-        Delete
-      </Button>
+        accessibilityLabel="Delete discount stack"
+        icon={<Icon source={DeleteMajor} />}
+      />
     </HorizontalStack>
   ]);
 

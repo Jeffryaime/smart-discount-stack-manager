@@ -9,7 +9,11 @@ import {
 	VerticalStack,
 	Badge,
 	DataTable,
+	Icon,
 } from '@shopify/polaris';
+import {
+	EditMajor,
+} from '@shopify/polaris-icons';
 import { useNavigate } from 'react-router-dom';
 import { useDiscountStacks } from '../hooks/useDiscountStacks';
 
@@ -30,9 +34,9 @@ function Dashboard() {
 			<Button
 				plain
 				onClick={() => navigate(`/discount-stacks/${stack._id}/edit`)}
-			>
-				Edit
-			</Button>,
+				accessibilityLabel="Edit discount stack"
+				icon={<Icon source={EditMajor} />}
+			/>,
 		]) || [];
 
 	return (

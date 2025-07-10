@@ -8,21 +8,14 @@ function validateDiscountStackData(name, discounts) {
 	if (!discounts || discounts.length === 0) {
 		validationErrors.push('At least one discount rule is required');
 	} else {
+		// Validate each discount rule
 		discounts.forEach((discount, index) => {
 			if (!discount.type) {
 				validationErrors.push(`Discount ${index + 1}: Type is required`);
-			} else if (
-				!['percentage', 'fixed_amount', 'buy_x_get_y'].includes(discount.type)
-			) {
-				validationErrors.push(`Discount ${index + 1}: Invalid discount type`);
-			} else if (typeof discount.value !== 'number' || isNaN(discount.value)) {
-				validationErrors.push(
-					`Discount ${index + 1}: Value must be a valid number`
-				);
-			} else if (discount.value <= 0) {
-				validationErrors.push(
-					`Discount ${index + 1}: Amount must be greater than 0`
-				);
+			}
+
+			if (discount.value === undefined || discount.value === null) {
+				validationErrors.push(`Discount ${index + 1}: Value is required`);
 			} else {
 				if (
 					discount.type === 'percentage' &&
@@ -30,6 +23,15 @@ function validateDiscountStackData(name, discounts) {
 				) {
 					validationErrors.push(
 						`Discount ${index + 1}: Percentage must be between 0 and 100`
+					);
+				}
+				if (
+					(discount.type === 'fixed_amount' ||
+						discount.type === 'buy_x_get_y') &&
+					discount.value <= 0
+				) {
+					validationErrors.push(
+						`Discount ${index + 1}: Amount must be greater than 0`
 					);
 				}
 			}
