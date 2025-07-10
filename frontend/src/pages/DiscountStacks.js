@@ -13,13 +13,16 @@ import {
 	TextContainer,
 	Text,
 	Icon,
+	Popover,
+	ActionList,
 } from '@shopify/polaris';
-import { EditMajor, DeleteMajor } from '@shopify/polaris-icons';
+import { EditMajor, DeleteMajor, CircleTickMajor, CircleCancelMajor } from '@shopify/polaris-icons';
 import { useNavigate } from 'react-router-dom';
 import {
 	useDiscountStacks,
 	useDeleteDiscountStack,
 	useBulkDeleteDiscountStacks,
+	useBulkUpdateDiscountStacks,
 } from '../hooks/useDiscountStacks';
 
 function DiscountStacks() {
@@ -27,6 +30,7 @@ function DiscountStacks() {
 	const { data: discountStacks, isLoading } = useDiscountStacks();
 	const deleteDiscountStack = useDeleteDiscountStack();
 	const bulkDeleteDiscountStacks = useBulkDeleteDiscountStacks();
+	const bulkUpdateDiscountStacks = useBulkUpdateDiscountStacks();
 
 	const [searchValue, setSearchValue] = useState('');
 	const [statusFilter, setStatusFilter] = useState([]);
@@ -36,6 +40,7 @@ function DiscountStacks() {
 	const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
 	const [errorModalOpen, setErrorModalOpen] = useState(false);
 	const [errorMessage, setErrorMessage] = useState('');
+	const [moreActionsOpen, setMoreActionsOpen] = useState(false);
 
 	const handleDelete = (stack) => {
 		setStackToDelete(stack);
@@ -52,6 +57,7 @@ function DiscountStacks() {
 
 	const handleBulkDelete = () => {
 		if (selectedResources.length > 0) {
+			setMoreActionsOpen(false);
 			setBulkDeleteModalOpen(true);
 		}
 	};
@@ -71,6 +77,60 @@ function DiscountStacks() {
 				error.response?.data?.message ||
 					error.message ||
 					'Failed to delete discount stacks. Please try again.'
+			);
+			setErrorModalOpen(true);
+		}
+	};
+
+	const handleBulkActivate = async () => {
+		// Only activate inactive items
+		const inactiveSelectedIds = selectedResources
+			.filter(index => !filteredStacks[index]?.isActive)
+			.map(index => filteredStacks[index]._id);
+
+		if (inactiveSelectedIds.length === 0) return;
+
+		setMoreActionsOpen(false);
+
+		try {
+			await bulkUpdateDiscountStacks.mutateAsync({
+				ids: inactiveSelectedIds,
+				updates: { isActive: true }
+			});
+			setSelectedResources([]);
+		} catch (error) {
+			console.error('Error activating discount stacks:', error);
+			setErrorMessage(
+				error.response?.data?.message ||
+					error.message ||
+					'Failed to activate discount stacks. Please try again.'
+			);
+			setErrorModalOpen(true);
+		}
+	};
+
+	const handleBulkDeactivate = async () => {
+		// Only deactivate active items
+		const activeSelectedIds = selectedResources
+			.filter(index => filteredStacks[index]?.isActive)
+			.map(index => filteredStacks[index]._id);
+
+		if (activeSelectedIds.length === 0) return;
+
+		setMoreActionsOpen(false);
+
+		try {
+			await bulkUpdateDiscountStacks.mutateAsync({
+				ids: activeSelectedIds,
+				updates: { isActive: false }
+			});
+			setSelectedResources([]);
+		} catch (error) {
+			console.error('Error deactivating discount stacks:', error);
+			setErrorMessage(
+				error.response?.data?.message ||
+					error.message ||
+					'Failed to deactivate discount stacks. Please try again.'
 			);
 			setErrorModalOpen(true);
 		}
@@ -145,16 +205,6 @@ function DiscountStacks() {
 				content: 'Create Discount Stack',
 				onAction: () => navigate('/discount-stacks/create'),
 			}}
-			{...(selectedResources.length > 0 && {
-				secondaryActions: [
-					{
-						content: `Delete ${selectedResources.length} selected`,
-						onAction: handleBulkDelete,
-						destructive: true,
-						icon: DeleteMajor,
-					},
-				],
-			})}
 		>
 			<Card>
 				<div style={{ padding: '20px' }}>
@@ -220,6 +270,45 @@ function DiscountStacks() {
 										>
 											Deselect All
 										</Button>
+										{selectedResources.length > 0 && (
+											<Popover
+												active={moreActionsOpen}
+												activator={
+													<Button
+														size="slim"
+														onClick={() => setMoreActionsOpen(!moreActionsOpen)}
+														disclosure
+													>
+														More Actions
+													</Button>
+												}
+												onClose={() => setMoreActionsOpen(false)}
+											>
+												<ActionList
+													items={[
+														// Only show activate if there are inactive items selected
+														...(selectedResources.some(index => !filteredStacks[index]?.isActive) ? [{
+															content: `Activate ${selectedResources.filter(index => !filteredStacks[index]?.isActive).length} selected`,
+															onAction: handleBulkActivate,
+															icon: CircleTickMajor,
+														}] : []),
+														// Only show deactivate if there are active items selected
+														...(selectedResources.some(index => filteredStacks[index]?.isActive) ? [{
+															content: `Deactivate ${selectedResources.filter(index => filteredStacks[index]?.isActive).length} selected`,
+															onAction: handleBulkDeactivate,
+															icon: CircleCancelMajor,
+														}] : []),
+														// Delete action (always show if items are selected)
+														{
+															content: `Delete ${selectedResources.length} selected`,
+															onAction: handleBulkDelete,
+															destructive: true,
+															icon: DeleteMajor,
+														},
+													]}
+												/>
+											</Popover>
+										)}
 									</HorizontalStack>
 									{selectedResources.length > 0 && (
 										<Text variant="bodySm" tone="subdued">

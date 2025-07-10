@@ -79,25 +79,40 @@ const discountController = {
 			const { shop } = req.query;
 			const { name, discounts } = req.body;
 
-			// Validation
-			const validationErrors = validateDiscountStackData(name, discounts);
+			// Only run validation if we're updating name or discounts
+			// For simple status updates (like isActive), skip validation
+			const isStatusUpdate = (() => {
+				const keys = Object.keys(req.body);
+				if (keys.length !== 1 || !('isActive' in req.body)) {
+					return false;
+				}
+				// Check that 'isActive' is the only key with a defined, non-null value
+				return keys.every((key) => key === 'isActive' || req.body[key] == null);
+			})();
 
-			if (validationErrors.length > 0) {
-				return res.status(400).json({
-					error: 'Validation failed',
-					details: validationErrors,
-				});
+			if (!isStatusUpdate) {
+				// Validation for full updates
+				const validationErrors = validateDiscountStackData(name, discounts);
+
+				if (validationErrors.length > 0) {
+					return res.status(400).json({
+						error: 'Validation failed',
+						details: validationErrors,
+					});
+				}
 			}
 
 			// Remove _id from discounts array to let MongoDB generate ObjectIds
-			const updateData = {
-				...req.body,
-				discounts:
-					req.body.discounts?.map((discount) => {
-						const { _id, id, ...discountWithoutId } = discount;
-						return discountWithoutId;
-					}) || [],
-			};
+			const updateData = isStatusUpdate
+				? req.body
+				: {
+						...req.body,
+						discounts:
+							req.body.discounts?.map((discount) => {
+								const { _id, id, ...discountWithoutId } = discount;
+								return discountWithoutId;
+							}) || [],
+				  };
 
 			const discountStack = await DiscountStack.findOneAndUpdate(
 				{ _id: id, shop },
