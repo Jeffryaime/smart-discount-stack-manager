@@ -16,7 +16,7 @@ apiClient.interceptors.request.use((config) => {
   
   // In development mode, use a default shop if none provided
   const isDevelopment = process.env.NODE_ENV === 'development';
-  const shopParam = shop || (isDevelopment ? 'test-shop.myshopify.com' : null);
+  const shopParam = shop || (isDevelopment ? 'jaynorthcode.myshopify.com' : null);
   
   if (shopParam) {
     config.params = {
@@ -56,6 +56,13 @@ export const discountStacksApi = {
 
   test: async (id, testData) => {
     const response = await apiClient.post(`/discounts/${id}/test`, { testData });
+    return response.data;
+  },
+
+  getAllProducts: async (limit = 100) => {
+    const response = await apiClient.get('/discounts/products', {
+      params: { limit }
+    });
     return response.data;
   },
 
