@@ -22,7 +22,7 @@ describe('Enhanced BOGO Validation Tests', () => {
 
     const errors = validateDiscountStackData('Test Stack', discounts);
     expect(errors).toContain(
-      'Discount 1: BOGO with specific mode requires either eligible products or free products to be specified'
+      'Discount 1: BOGO with specific mode requires eligible products to be specified (free products will auto-default to eligible products if not specified)'
     );
   });
 
@@ -49,7 +49,7 @@ describe('Enhanced BOGO Validation Tests', () => {
     expect(errors).toHaveLength(0);
   });
 
-  test('should pass validation when specific mode has free products only', () => {
+  test('should fail validation when specific mode has free products only (no eligible products)', () => {
     const discounts = [
       {
         type: 'buy_x_get_y',
@@ -57,8 +57,8 @@ describe('Enhanced BOGO Validation Tests', () => {
         bogoConfig: {
           buyQuantity: 2,
           getQuantity: 1,
-          eligibleProductIds: [], // Empty but that's OK
-          freeProductIds: ['11111', '22222'], // Has free products
+          eligibleProductIds: [], // Empty - should cause validation error
+          freeProductIds: ['11111', '22222'], // Has free products but no eligible products
           limitPerOrder: null,
           freeProductMode: 'specific',
         },
@@ -69,7 +69,9 @@ describe('Enhanced BOGO Validation Tests', () => {
     ];
 
     const errors = validateDiscountStackData('Test Stack', discounts);
-    expect(errors).toHaveLength(0);
+    expect(errors).toContain(
+      'Discount 1: Cannot specify free products without eligible products. Eligible products determine which items qualify for the "buy" part of the BOGO offer'
+    );
   });
 
   test('should pass validation when specific mode has both eligible and free products', () => {
@@ -130,7 +132,7 @@ describe('Enhanced BOGO Validation Tests', () => {
           getQuantity: 1,
           eligibleProductIds: [], // Missing products for specific mode
           freeProductIds: [],
-          limitPerOrder: -5, // Invalid limit
+          limitPerOrder: 0, // Invalid limit (should be >= 1)
           freeProductMode: 'specific',
         },
         conditions: {},
@@ -144,7 +146,7 @@ describe('Enhanced BOGO Validation Tests', () => {
     // Should have multiple errors for the same discount
     expect(errors.length).toBeGreaterThan(1);
     expect(errors).toContain(
-      'Discount 1: BOGO with specific mode requires either eligible products or free products to be specified'
+      'Discount 1: BOGO with specific mode requires eligible products to be specified (free products will auto-default to eligible products if not specified)'
     );
     expect(errors).toContain(
       'Discount 1: Per-order limit must be greater than 0 or leave empty for no limit'
@@ -192,7 +194,7 @@ describe('Enhanced BOGO Validation Tests', () => {
     
     // Should treat null as specific mode and require products
     expect(errors).toContain(
-      'Discount 1: BOGO with specific mode requires either eligible products or free products to be specified'
+      'Discount 1: BOGO with specific mode requires eligible products to be specified (free products will auto-default to eligible products if not specified)'
     );
   });
 });

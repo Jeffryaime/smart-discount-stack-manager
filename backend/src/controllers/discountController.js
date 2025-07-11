@@ -27,14 +27,42 @@ const initializeBogoConfig = (discount) => {
 	if (discountWithoutId.type === 'buy_x_get_y') {
 		const freeProductMode = discountWithoutId.bogoConfig?.freeProductMode || 'specific';
 		
+		const eligibleProductIds = validateProductIds(discountWithoutId.bogoConfig?.eligibleProductIds || []);
+		const originalFreeProductIds = validateProductIds(discountWithoutId.bogoConfig?.freeProductIds || []);
+		
+		// Auto-set free products to eligible products when none selected (specific mode only)
+		let freeProductIds;
+		if (freeProductMode === 'cheapest') {
+			freeProductIds = [];
+		} else if (originalFreeProductIds.length === 0) {
+			freeProductIds = [...eligibleProductIds]; // Auto-set to same as eligible
+		} else {
+			freeProductIds = originalFreeProductIds;
+		}
+		
+		// Ensure BOGO discount has a value (use buyQuantity as the value)
+		const buyQuantity = discountWithoutId.bogoConfig?.buyQuantity || discountWithoutId.value || 1;
+		const getQuantity = discountWithoutId.bogoConfig?.getQuantity || 1;
+		
+		// Auto-set limitPerOrder to match getQuantity by default, but allow user override
+		let limitPerOrder;
+		if (discountWithoutId.bogoConfig?.limitPerOrder !== undefined) {
+			// User has explicitly set a limit (including null to disable limit)
+			limitPerOrder = discountWithoutId.bogoConfig.limitPerOrder;
+		} else {
+			// Auto-set limit to match get quantity for sensible default
+			limitPerOrder = getQuantity;
+		}
+		
+		discountWithoutId.value = buyQuantity;
+		
 		discountWithoutId.bogoConfig = {
-			buyQuantity: discountWithoutId.bogoConfig?.buyQuantity || discountWithoutId.value || 1,
-			getQuantity: discountWithoutId.bogoConfig?.getQuantity || 1,
-			eligibleProductIds: validateProductIds(discountWithoutId.bogoConfig?.eligibleProductIds || []),
-			freeProductIds: freeProductMode === 'cheapest' ? [] : validateProductIds(discountWithoutId.bogoConfig?.freeProductIds || []),
-			limitPerOrder: discountWithoutId.bogoConfig?.limitPerOrder || null,
-			freeProductMode: freeProductMode,
-			...discountWithoutId.bogoConfig
+			buyQuantity: buyQuantity,
+			getQuantity: getQuantity,
+			eligibleProductIds: eligibleProductIds,
+			freeProductIds: freeProductIds,
+			limitPerOrder: limitPerOrder,
+			freeProductMode: freeProductMode
 		};
 		
 		// Validation is now handled by validateDiscountStackData function
@@ -660,3 +688,5 @@ const discountController = {
 };
 
 module.exports = discountController;
+module.exports.initializeBogoConfig = initializeBogoConfig;
+module.exports.validateProductIds = validateProductIds;

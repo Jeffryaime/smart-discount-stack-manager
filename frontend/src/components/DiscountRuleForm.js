@@ -32,7 +32,7 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
         getQuantity: 1,
         eligibleProductIds: [],
         freeProductIds: [],
-        limitPerOrder: null,
+        limitPerOrder: 1, // Auto-set to match getQuantity by default
         freeProductMode: 'specific' // 'specific' or 'cheapest'
       },
       conditions: {
@@ -93,8 +93,9 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
       } else if (parent === 'bogoConfig' && (child === 'buyQuantity' || child === 'getQuantity') && value !== '') {
         updatedDiscounts[index][parent][child] = Number(value);
       } else if (parent === 'bogoConfig' && child === 'limitPerOrder') {
-        // Handle limitPerOrder specially - empty string should become null
-        updatedDiscounts[index][parent][child] = value === '' || value === null || value === undefined ? null : Number(value);
+        // Handle limitPerOrder specially - ensure minimum value of 1 (no unlimited/0 option)
+        const numValue = Number(value) || 1;
+        updatedDiscounts[index][parent][child] = Math.max(1, numValue);
       } else {
         updatedDiscounts[index][parent][child] = value;
       }
@@ -231,7 +232,29 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                               label="Get Quantity (Y)"
                               type="number"
                               value={discount.bogoConfig?.getQuantity || 1}
-                              onChange={(value) => updateDiscount(index, 'bogoConfig.getQuantity', parseInt(value) || 1)}
+                              onChange={(value) => {
+                                const newGetQuantity = parseInt(value) || 1;
+                                const currentLimit = discount.bogoConfig?.limitPerOrder || 1;
+                                const currentGetQuantity = discount.bogoConfig?.getQuantity || 1;
+                                
+                                // Calculate the proportional multiplier the user had set
+                                const multiplier = Math.max(1, Math.round(currentLimit / currentGetQuantity));
+                                
+                                // Auto-update limit to maintain the same proportional relationship
+                                const newLimit = newGetQuantity * multiplier;
+                                
+                                // Update both fields in sequence to ensure proper state update
+                                const updatedDiscounts = [...discounts];
+                                updatedDiscounts[index] = {
+                                  ...updatedDiscounts[index],
+                                  bogoConfig: {
+                                    ...updatedDiscounts[index].bogoConfig,
+                                    getQuantity: newGetQuantity,
+                                    limitPerOrder: newLimit
+                                  }
+                                };
+                                onChange(updatedDiscounts);
+                              }}
                               helpText="How many items they get free"
                               min="1"
                             />
@@ -349,13 +372,35 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                           )}
                           
                           <div style={{ width: '50%' }}>
-                            <TextField
+                            <Select
                               label="Limit Per Order"
-                              type="number"
-                              value={discount.bogoConfig?.limitPerOrder === null || discount.bogoConfig?.limitPerOrder === undefined ? '' : discount.bogoConfig.limitPerOrder}
-                              onChange={(value) => updateDiscount(index, 'bogoConfig.limitPerOrder', value)}
-                              helpText="Maximum free items per order (leave empty for no limit)"
-                              placeholder="e.g., 2"
+                              options={(() => {
+                                const getQuantity = discount.bogoConfig?.getQuantity || 1;
+                                const options = [];
+                                
+                                // Generate multiples: 1x, 2x, 3x, 4x, 5x, 6x, 7x, 8x, 9x, 10x
+                                for (let multiplier = 1; multiplier <= 10; multiplier++) {
+                                  const value = getQuantity * multiplier;
+                                  options.push({
+                                    label: value.toString(),
+                                    value: value.toString()
+                                  });
+                                }
+                                
+                                return options;
+                              })()}
+                              value={discount.bogoConfig?.limitPerOrder?.toString() || (discount.bogoConfig?.getQuantity || 1).toString()}
+                              onChange={(value) => {
+                                const numValue = parseInt(value) || 1;
+                                updateDiscount(index, 'bogoConfig.limitPerOrder', numValue);
+                              }}
+                              helpText={(() => {
+                                const getQuantity = discount.bogoConfig?.getQuantity || 1;
+                                const limitPerOrder = discount.bogoConfig?.limitPerOrder || getQuantity;
+                                const multiplier = Math.round(limitPerOrder / getQuantity);
+                                
+                                return `Selected: ${limitPerOrder} free items per order (${multiplier}x the Get Quantity of ${getQuantity})`;
+                              })()}
                             />
                           </div>
                         </VerticalStack>

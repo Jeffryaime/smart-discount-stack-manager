@@ -2,9 +2,16 @@ const request = require('supertest');
 const express = require('express');
 const discountRoutes = require('../routes/discounts');
 
-// Create test app
+// Create test app with minimal auth middleware
 const app = express();
 app.use(express.json());
+
+// Mock auth middleware for testing
+app.use((req, res, next) => {
+  req.session = { shop: req.query.shop };
+  next();
+});
+
 app.use('/api/discounts', discountRoutes);
 
 describe('BOGO API Validation Integration Tests', () => {
@@ -40,7 +47,7 @@ describe('BOGO API Validation Integration Tests', () => {
 
       expect(response.body.error).toBe('Validation failed');
       expect(response.body.details).toContain(
-        'Discount 1: BOGO with specific mode requires either eligible products or free products to be specified'
+        'Discount 1: BOGO with specific mode requires eligible products to be specified (free products will auto-default to eligible products if not specified)'
       );
     });
 
@@ -164,7 +171,7 @@ describe('BOGO API Validation Integration Tests', () => {
       
       // Should include our new validation error
       expect(response.body.details).toContain(
-        'Discount 1: BOGO with specific mode requires either eligible products or free products to be specified'
+        'Discount 1: BOGO with specific mode requires eligible products to be specified (free products will auto-default to eligible products if not specified)'
       );
     });
 
@@ -193,7 +200,7 @@ describe('BOGO API Validation Integration Tests', () => {
         .expect(400);
 
       expect(response.body.details).toContain(
-        'Discount 1: BOGO with specific mode requires either eligible products or free products to be specified'
+        'Discount 1: BOGO with specific mode requires eligible products to be specified (free products will auto-default to eligible products if not specified)'
       );
     });
   });

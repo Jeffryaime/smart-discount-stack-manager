@@ -14,33 +14,51 @@ function validateDiscountStackData(name, discounts) {
 				validationErrors.push(`Discount ${index + 1}: Type is required`);
 			}
 
-			if (discount.value === undefined || discount.value === null) {
-				validationErrors.push(`Discount ${index + 1}: Value is required`);
+			// Handle BOGO discounts differently - they don't need a traditional "value"
+			if (discount.type === 'buy_x_get_y') {
+				// For BOGO, validate buyQuantity and getQuantity instead of value
+				const buyQuantity = discount.bogoConfig?.buyQuantity || discount.value || 1;
+				const getQuantity = discount.bogoConfig?.getQuantity || 1;
+				
+				if (buyQuantity <= 0) {
+					validationErrors.push(
+						`Discount ${index + 1}: Buy quantity must be greater than 0`
+					);
+				}
+				if (getQuantity <= 0) {
+					validationErrors.push(
+						`Discount ${index + 1}: Get quantity must be greater than 0`
+					);
+				}
 			} else {
-				if (
-					discount.type === 'percentage' &&
-					(discount.value <= 0 || discount.value > 100)
-				) {
-					validationErrors.push(
-						`Discount ${index + 1}: Percentage must be between 1 and 100`
-					);
-				}
-				if (
-					(discount.type === 'fixed_amount' ||
-						discount.type === 'buy_x_get_y') &&
-					discount.value <= 0
-				) {
-					validationErrors.push(
-						`Discount ${index + 1}: Amount must be greater than 0`
-					);
-				}
-				if (
-					discount.type === 'free_shipping' &&
-					discount.value !== 0
-				) {
-					validationErrors.push(
-						`Discount ${index + 1}: Free shipping value should be 0`
-					);
+				// For non-BOGO discounts, validate the value field
+				if (discount.value === undefined || discount.value === null) {
+					validationErrors.push(`Discount ${index + 1}: Value is required`);
+				} else {
+					if (
+						discount.type === 'percentage' &&
+						(discount.value <= 0 || discount.value > 100)
+					) {
+						validationErrors.push(
+							`Discount ${index + 1}: Percentage must be between 1 and 100`
+						);
+					}
+					if (
+						discount.type === 'fixed_amount' &&
+						discount.value <= 0
+					) {
+						validationErrors.push(
+							`Discount ${index + 1}: Amount must be greater than 0`
+						);
+					}
+					if (
+						discount.type === 'free_shipping' &&
+						discount.value !== 0
+					) {
+						validationErrors.push(
+							`Discount ${index + 1}: Free shipping value should be 0`
+						);
+					}
 				}
 			}
 
@@ -107,15 +125,26 @@ function validateDiscountStackData(name, discounts) {
 					);
 				}
 				
-				// Validate that specific mode requires either free products or eligible products
+				// Validate specific mode BOGO configuration
 				// Default to 'specific' mode if freeProductMode is not set, null, or undefined
 				const mode = bogo.freeProductMode || 'specific';
-				if (mode === 'specific' && 
-					(!bogo.freeProductIds || bogo.freeProductIds.length === 0) && 
-					(!bogo.eligibleProductIds || bogo.eligibleProductIds.length === 0)) {
-					validationErrors.push(
-						`Discount ${index + 1}: BOGO with specific mode requires either eligible products or free products to be specified`
-					);
+				if (mode === 'specific') {
+					const hasEligibleProducts = bogo.eligibleProductIds && bogo.eligibleProductIds.length > 0;
+					const hasFreeProducts = bogo.freeProductIds && bogo.freeProductIds.length > 0;
+					
+					// Case 1: Neither eligible nor free products specified
+					if (!hasEligibleProducts && !hasFreeProducts) {
+						validationErrors.push(
+							`Discount ${index + 1}: BOGO with specific mode requires eligible products to be specified (free products will auto-default to eligible products if not specified)`
+						);
+					}
+					
+					// Case 2: Free products specified without eligible products (broken configuration)
+					if (!hasEligibleProducts && hasFreeProducts) {
+						validationErrors.push(
+							`Discount ${index + 1}: Cannot specify free products without eligible products. Eligible products determine which items qualify for the "buy" part of the BOGO offer`
+						);
+					}
 				}
 			}
 		});
