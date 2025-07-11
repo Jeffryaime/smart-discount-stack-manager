@@ -1,6 +1,7 @@
 const DiscountStack = require('../models/DiscountStack');
 const { shopify } = require('../config/shopify');
 const { validateDiscountStackData } = require('../utils/validation');
+const BOGOCalculator = require('../utils/bogoCalculator');
 
 // Helper function to validate product IDs
 const validateProductIds = (productIds) => {
@@ -16,6 +17,30 @@ const validateProductIds = (productIds) => {
 		}
 		return true;
 	});
+};
+
+// Helper function to initialize BOGO configuration
+const initializeBogoConfig = (discount) => {
+	const { _id, id, ...discountWithoutId } = discount;
+
+	// Initialize bogoConfig for BOGO discounts
+	if (discountWithoutId.type === 'buy_x_get_y') {
+		const freeProductMode = discountWithoutId.bogoConfig?.freeProductMode || 'specific';
+		
+		discountWithoutId.bogoConfig = {
+			buyQuantity: discountWithoutId.bogoConfig?.buyQuantity || discountWithoutId.value || 1,
+			getQuantity: discountWithoutId.bogoConfig?.getQuantity || 1,
+			eligibleProductIds: validateProductIds(discountWithoutId.bogoConfig?.eligibleProductIds || []),
+			freeProductIds: freeProductMode === 'cheapest' ? [] : validateProductIds(discountWithoutId.bogoConfig?.freeProductIds || []),
+			limitPerOrder: discountWithoutId.bogoConfig?.limitPerOrder || null,
+			freeProductMode: freeProductMode,
+			...discountWithoutId.bogoConfig
+		};
+		
+		// Validation is now handled by validateDiscountStackData function
+	}
+
+	return discountWithoutId;
 };
 
 const discountController = {
@@ -49,24 +74,7 @@ const discountController = {
 			const discountData = {
 				...req.body,
 				shop,
-				discounts:
-					req.body.discounts?.map((discount) => {
-						const { _id, id, ...discountWithoutId } = discount;
-
-						// Initialize bogoConfig for BOGO discounts
-						if (discountWithoutId.type === 'buy_x_get_y') {
-							discountWithoutId.bogoConfig = {
-								buyQuantity: discountWithoutId.bogoConfig?.buyQuantity || discountWithoutId.value || 1,
-								getQuantity: discountWithoutId.bogoConfig?.getQuantity || 1,
-								eligibleProductIds: validateProductIds(discountWithoutId.bogoConfig?.eligibleProductIds || []),
-								freeProductIds: validateProductIds(discountWithoutId.bogoConfig?.freeProductIds || []),
-								limitPerOrder: discountWithoutId.bogoConfig?.limitPerOrder || null,
-								...discountWithoutId.bogoConfig
-							};
-						}
-
-						return discountWithoutId;
-					}) || [],
+				discounts: req.body.discounts?.map(initializeBogoConfig) || [],
 			};
 
 			const discountStack = new DiscountStack(discountData);
@@ -136,24 +144,7 @@ const discountController = {
 				? req.body
 				: {
 						...req.body,
-						discounts:
-							req.body.discounts?.map((discount) => {
-								const { _id, id, ...discountWithoutId } = discount;
-
-								// Initialize bogoConfig for BOGO discounts
-								if (discountWithoutId.type === 'buy_x_get_y') {
-									discountWithoutId.bogoConfig = {
-										buyQuantity: discountWithoutId.bogoConfig?.buyQuantity || discountWithoutId.value || 1,
-										getQuantity: discountWithoutId.bogoConfig?.getQuantity || 1,
-										eligibleProductIds: validateProductIds(discountWithoutId.bogoConfig?.eligibleProductIds || []),
-										freeProductIds: validateProductIds(discountWithoutId.bogoConfig?.freeProductIds || []),
-										limitPerOrder: discountWithoutId.bogoConfig?.limitPerOrder || null,
-										...discountWithoutId.bogoConfig
-									};
-								}
-
-								return discountWithoutId;
-							}) || [],
+						discounts: req.body.discounts?.map(initializeBogoConfig) || [],
 				  };
 
 			const discountStack = await DiscountStack.findOneAndUpdate(
@@ -360,57 +351,76 @@ const discountController = {
 						break;
 
 					case 'buy_x_get_y':
-						// Enhanced BOGO calculation using bogoConfig
-						const buyQuantity = discount.bogoConfig?.buyQuantity || discount.value || 1;
-						const getQuantity = discount.bogoConfig?.getQuantity || 1;
-						const limitPerOrder = discount.bogoConfig?.limitPerOrder || null;
-
+						// Enhanced BOGO calculation with auto-cheapest mode support
+						const bogoConfig = discount.bogoConfig || {};
+						const freeProductMode = bogoConfig.freeProductMode || 'specific';
+						
 						console.log('Enhanced BOGO Debug:', {
 							quantity: testData.quantity,
-							buyQuantity: buyQuantity,
-							getQuantity: getQuantity,
-							limitPerOrder: limitPerOrder,
-							meetsCondition: testData.quantity >= buyQuantity
+							bogoConfig,
+							freeProductMode,
+							meetsCondition: testData.quantity >= (bogoConfig.buyQuantity || 1)
 						});
 
-						// Calculate how many complete BOGO cycles exist
-						// Each cycle requires (buyQuantity + getQuantity) total items
-						const completeBogoSets = Math.floor(testData.quantity / (buyQuantity + getQuantity));
-						
-						// Calculate total free items from complete cycles
-						let totalFreeItems = completeBogoSets * getQuantity;
+						// Use new BOGO calculator with mode support
+						if (freeProductMode === 'cheapest' || (bogoConfig.eligibleProductIds && bogoConfig.eligibleProductIds.length > 0)) {
+							// Validate testData to prevent division by zero and invalid quantities
+							if (testData.quantity <= 0) {
+								console.warn('BOGO calculation skipped: testData.quantity must be greater than 0');
+								break;
+							}
 
-						// Apply per-order limit if specified
-						const limitApplied = limitPerOrder && totalFreeItems > limitPerOrder;
-						if (limitApplied) {
-							totalFreeItems = limitPerOrder;
-						}
-
-						if (totalFreeItems > 0) {
-							const pricePerItem = testData.originalPrice / testData.quantity;
-							discountAmount = totalFreeItems * pricePerItem;
-							appliedDiscount.appliedAmount = discountAmount;
-							appliedDiscount.freeItems = totalFreeItems;
-							appliedDiscount.bogoDetails = {
-								buyQuantity,
-								getQuantity,
-								completeBuySets: completeBogoSets,
-								totalFreeItemsBeforeLimit: completeBogoSets * getQuantity,
-								limitApplied
+							// Use enhanced calculator for new modes
+							const cart = {
+								items: testData.productIds?.map((productId, index) => {
+									const productCount = testData.productIds?.length || 1;
+									let itemQuantity = Math.floor(testData.quantity / productCount);
+									
+									// Ensure minimum quantity of 1 per item to avoid zero quantities
+									if (itemQuantity === 0) {
+										itemQuantity = 1;
+									}
+									
+									return {
+										productId,
+										quantity: itemQuantity,
+										price: testData.originalPrice / testData.quantity
+									};
+								}) || [{
+									productId: 'test-product',
+									quantity: testData.quantity,
+									price: testData.originalPrice / testData.quantity
+								}]
 							};
 
-							console.log('BOGO Calculation:', {
-								totalQuantity: testData.quantity,
-								buyQuantity,
-								getQuantity,
-								completeBogoSets,
-								totalFreeItemsBeforeLimit: completeBogoSets * getQuantity,
-								totalFreeItems,
-								pricePerItem,
-								discountAmount,
-								limitPerOrder,
-								limitApplied
-							});
+							const bogoResult = BOGOCalculator.calculateBOGODiscount(cart, bogoConfig, testData);
+							
+							if (bogoResult.appliedAmount > 0) {
+								discountAmount = bogoResult.appliedAmount;
+								appliedDiscount.appliedAmount = discountAmount;
+								appliedDiscount.freeItems = bogoResult.freeItems;
+								appliedDiscount.calculationDetails = bogoResult.calculationDetails;
+								appliedDiscount.bogoMode = freeProductMode;
+
+								console.log('Enhanced BOGO Calculation:', bogoResult);
+							}
+						} else {
+							// Use legacy calculation for backward compatibility
+							const buyQuantity = bogoConfig.buyQuantity || discount.value || 1;
+							const getQuantity = bogoConfig.getQuantity || 1;
+							const limitPerOrder = bogoConfig.limitPerOrder || null;
+
+							const legacyResult = BOGOCalculator.calculateLegacyBOGO(testData, buyQuantity, getQuantity, limitPerOrder);
+							
+							if (legacyResult.appliedAmount > 0) {
+								discountAmount = legacyResult.appliedAmount;
+								appliedDiscount.appliedAmount = discountAmount;
+								appliedDiscount.freeItems = legacyResult.freeItems;
+								appliedDiscount.bogoDetails = legacyResult.bogoDetails;
+								appliedDiscount.bogoMode = 'legacy';
+
+								console.log('Legacy BOGO Calculation:', legacyResult);
+							}
 						}
 						break;
 				}

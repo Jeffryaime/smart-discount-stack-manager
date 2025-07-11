@@ -1,0 +1,77 @@
+{
+  "_comments": {
+    "description": "Test configuration for BOGO feature test runner",
+    "environmentVariables": {
+      "TEST_CONFIG_PATH": "Override path to this config file",
+      "TEST_TIMEOUT": "Override test timeout in milliseconds",
+      "TEST_DEBUG": "Enable debug mode (true/false)",
+      "TEST_VERBOSE": "Enable verbose output (true/false)"
+    },
+    "usage": [
+      "node simple-test-runner.js",
+      "TEST_CONFIG_PATH=./custom-config.json node simple-test-runner.js",
+      "TEST_TIMEOUT=30000 node simple-test-runner.js"
+    ]
+  },
+  "testSuite": {
+    "name": "BOGO Feature Test Suite",
+    "description": "Comprehensive test suite for BOGO discount functionality",
+    "timeout": 60000,
+    "checklist": [
+      "Toggle between \"specific SKUs\" and \"auto-cheapest\" modes",
+      "Free Products field disabled when in cheapest mode", 
+      "Validation for cheapest mode requiring eligible products",
+      "Limit Per Order validation and enforcement",
+      "Backend calculation engine for both modes",
+      "UI shows appropriate help text and banners"
+    ]
+  },
+  "tests": [
+    {
+      "name": "Backend BOGO Validation Tests",
+      "cwd": "./backend",
+      "command": "npm",
+      "args": ["test", "--", "__tests__/bogo-validation.test.js"],
+      "category": "validation"
+    },
+    {
+      "name": "Backend Enhanced BOGO Validation Tests", 
+      "cwd": "./backend",
+      "command": "npm",
+      "args": ["test", "--", "__tests__/bogo-validation-enhanced.test.js"],
+      "category": "validation"
+    },
+    {
+      "name": "Backend BOGO Calculator Tests",
+      "cwd": "./backend",
+      "command": "npm", 
+      "args": ["test", "--", "__tests__/bogo-backend.test.js"],
+      "category": "calculation"
+    },
+    {
+      "name": "Backend BOGO Edge Cases Tests",
+      "cwd": "./backend",
+      "command": "npm",
+      "args": ["test", "--", "__tests__/bogo-edge-cases.test.js"], 
+      "category": "edge-cases"
+    },
+    {
+      "name": "Frontend BOGO Component Tests",
+      "cwd": "./frontend",
+      "command": "npm",
+      "args": ["test", "--", "src/components/__tests__/DiscountRuleForm.simple.test.js", "--watchAll=false"],
+      "category": "frontend"
+    }
+  ],
+  "output": {
+    "maxOutputLength": 1000,
+    "maxSampleLength": 500,
+    "truncationIndicator": "...[output truncated]...",
+    "showFullOutput": false
+  },
+  "debug": {
+    "showStackTrace": true,
+    "showProcessInfo": true,
+    "verboseErrors": true
+  }
+}

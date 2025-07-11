@@ -30,6 +30,11 @@ const discountRuleSchema = new mongoose.Schema({
     limitPerOrder: {
       type: Number,
       default: null
+    },
+    freeProductMode: {
+      type: String,
+      enum: ['specific', 'cheapest'],
+      default: 'specific'
     }
   },
   conditions: {

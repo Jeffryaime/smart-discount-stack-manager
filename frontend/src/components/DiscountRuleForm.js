@@ -10,6 +10,7 @@ import {
   FormLayout,
   Checkbox,
   Banner,
+  RadioButton,
 } from '@shopify/polaris';
 import ProductSelector from './ProductSelector';
 
@@ -31,7 +32,8 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
         getQuantity: 1,
         eligibleProductIds: [],
         freeProductIds: [],
-        limitPerOrder: null
+        limitPerOrder: null,
+        freeProductMode: 'specific' // 'specific' or 'cheapest'
       },
       conditions: {
         minimumAmount: null,
@@ -286,6 +288,30 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                       {discount.type === 'buy_x_get_y' && (
                         <VerticalStack gap="4">
                           <Text variant="bodySm" tone="subdued">BOGO Specific Options</Text>
+                          
+                          {/* Free Product Mode Selection */}
+                          <VerticalStack gap="3">
+                            <Text variant="bodyMd">Free Product Selection Mode</Text>
+                            <HorizontalStack gap="4">
+                              <RadioButton
+                                label="Use specific SKUs"
+                                checked={discount.bogoConfig?.freeProductMode === 'specific' || !discount.bogoConfig?.freeProductMode}
+                                id={`specific-${discount.id}`}
+                                name={`free-product-mode-${discount.id}`}
+                                onChange={() => updateDiscount(index, 'bogoConfig.freeProductMode', 'specific')}
+                                helpText="Manually select which products customers get for free"
+                              />
+                              <RadioButton
+                                label="Auto-discount cheapest eligible item"
+                                checked={discount.bogoConfig?.freeProductMode === 'cheapest'}
+                                id={`cheapest-${discount.id}`}
+                                name={`free-product-mode-${discount.id}`}
+                                onChange={() => updateDiscount(index, 'bogoConfig.freeProductMode', 'cheapest')}
+                                helpText="Automatically discount the cheapest item from eligible products"
+                              />
+                            </HorizontalStack>
+                          </VerticalStack>
+                          
                           <HorizontalStack gap="4">
                             <div style={{ flex: 1 }}>
                               <ProductSelector
@@ -301,11 +327,27 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                                 label="Free Products (Get Y)"
                                 value={discount.bogoConfig?.freeProductIds || []}
                                 onChange={(value) => updateDiscount(index, 'bogoConfig.freeProductIds', value)}
-                                helpText="Products that customers get for free. Leave empty to use the same products as 'Buy X'."
+                                helpText={discount.bogoConfig?.freeProductMode === 'cheapest' 
+                                  ? "This field is ignored when auto-discounting cheapest item" 
+                                  : "Products that customers get for free. Leave empty to use the same products as 'Buy X'."}
                                 placeholder="Search for free products..."
+                                disabled={discount.bogoConfig?.freeProductMode === 'cheapest'}
                               />
                             </div>
                           </HorizontalStack>
+                          
+                          {discount.bogoConfig?.freeProductMode === 'cheapest' && (
+                            <Banner status="info">
+                              <p>When using auto-discount mode, the system will:</p>
+                              <ul style={{ marginLeft: '20px', marginTop: '8px' }}>
+                                <li>Select the cheapest product from Eligible Products only</li>
+                                <li>If items have the same price, prefer matching items (same SKU)</li>
+                                <li>Otherwise, select the lowest-priced unit</li>
+                                <li>Respect the Limit Per Order setting if configured</li>
+                              </ul>
+                            </Banner>
+                          )}
+                          
                           <div style={{ width: '50%' }}>
                             <TextField
                               label="Limit Per Order"

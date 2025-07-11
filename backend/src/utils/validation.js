@@ -45,8 +45,8 @@ function validateDiscountStackData(name, discounts) {
 			}
 
 			// BOGO-specific validation
-			if (discount.type === 'buy_x_get_y' && discount.bogoConfig) {
-				const bogo = discount.bogoConfig;
+			if (discount.type === 'buy_x_get_y') {
+				const bogo = discount.bogoConfig || {};
 				
 				if (bogo.buyQuantity !== undefined && bogo.buyQuantity <= 0) {
 					validationErrors.push(
@@ -71,6 +71,13 @@ function validateDiscountStackData(name, discounts) {
 					}
 				}
 				
+				// Validate freeProductMode
+				if (bogo.freeProductMode && !['specific', 'cheapest'].includes(bogo.freeProductMode)) {
+					validationErrors.push(
+						`Discount ${index + 1}: Invalid free product mode. Must be 'specific' or 'cheapest'`
+					);
+				}
+				
 				// Validate product IDs format if provided
 				if (bogo.eligibleProductIds && Array.isArray(bogo.eligibleProductIds)) {
 					bogo.eligibleProductIds.forEach((productId, productIndex) => {
@@ -82,7 +89,8 @@ function validateDiscountStackData(name, discounts) {
 					});
 				}
 				
-				if (bogo.freeProductIds && Array.isArray(bogo.freeProductIds)) {
+				// Only validate freeProductIds if mode is 'specific'
+				if (bogo.freeProductMode !== 'cheapest' && bogo.freeProductIds && Array.isArray(bogo.freeProductIds)) {
 					bogo.freeProductIds.forEach((productId, productIndex) => {
 						if (typeof productId !== 'string' || productId.trim().length === 0) {
 							validationErrors.push(
@@ -90,6 +98,24 @@ function validateDiscountStackData(name, discounts) {
 							);
 						}
 					});
+				}
+				
+				// Validate that cheapest mode requires eligible products
+				if (bogo.freeProductMode === 'cheapest' && (!bogo.eligibleProductIds || bogo.eligibleProductIds.length === 0)) {
+					validationErrors.push(
+						`Discount ${index + 1}: Auto-discount cheapest mode requires eligible products to be specified`
+					);
+				}
+				
+				// Validate that specific mode requires either free products or eligible products
+				// Default to 'specific' mode if freeProductMode is not set, null, or undefined
+				const mode = bogo.freeProductMode || 'specific';
+				if (mode === 'specific' && 
+					(!bogo.freeProductIds || bogo.freeProductIds.length === 0) && 
+					(!bogo.eligibleProductIds || bogo.eligibleProductIds.length === 0)) {
+					validationErrors.push(
+						`Discount ${index + 1}: BOGO with specific mode requires either eligible products or free products to be specified`
+					);
 				}
 			}
 		});
