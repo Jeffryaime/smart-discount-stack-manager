@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { shopify } = require('../config/shopify');
+const redisClient = require('../config/redis');
 
 const verifyShopifyAuth = async (req, res, next) => {
 	try {
@@ -9,7 +10,7 @@ const verifyShopifyAuth = async (req, res, next) => {
 			return res.status(400).json({ error: 'Shop parameter is required' });
 		}
 
-		// Skip authentication in development mode for testing
+		// Skip authentication in development mode for testing (only for test shop, not real store)
 		if (
 			process.env.NODE_ENV === 'development' &&
 			shop === 'test-shop.myshopify.com' &&
@@ -24,15 +25,37 @@ const verifyShopifyAuth = async (req, res, next) => {
 			return next();
 		}
 
-		// Verify shop session
-		const session = await shopify.session.findSessionsByShop(shop);
-
-		if (!session || session.length === 0) {
-			return res.status(401).json({ error: 'No valid session found' });
+		// Try to find session in Redis
+		try {
+			const sessionKey = `shopify_session_${shop}`;
+			const sessionData = await redisClient.get(sessionKey);
+			
+			if (sessionData) {
+				try {
+					req.session = JSON.parse(sessionData);
+					return next();
+				} catch (parseError) {
+					console.error('Failed to parse session data from Redis:', {
+						shop: shop,
+						sessionKey: sessionKey,
+						error: parseError.message,
+						rawData: sessionData?.substring(0, 100) + '...' // Log first 100 chars for debugging
+					});
+					// Clear corrupted session data
+					await redisClient.del(sessionKey).catch(delError => {
+						console.error('Failed to delete corrupted session:', delError);
+					});
+				}
+			}
+		} catch (redisError) {
+			console.error('Redis session lookup error:', redisError);
 		}
 
-		req.session = session[0];
-		next();
+		// If no session found, require re-authentication
+		return res.status(401).json({ 
+			error: 'No valid session found', 
+			redirectUrl: `/api/auth/install?shop=${shop}` 
+		});
 	} catch (error) {
 		console.error('Auth middleware error:', error);
 		res.status(401).json({ error: 'Authentication failed' });

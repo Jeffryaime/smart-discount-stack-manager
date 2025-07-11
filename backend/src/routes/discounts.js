@@ -9,6 +9,12 @@ router.get('/', verifyShopifyAuth, discountController.getDiscountStacks);
 // Create new discount stack
 router.post('/', verifyShopifyAuth, discountController.createDiscountStack);
 
+// Get all products (for product selector) - Must be before /:id route
+router.get('/products', verifyShopifyAuth, discountController.getAllProducts);
+
+// Search products (for product selector) - Must be before /:id route
+router.get('/search/products', verifyShopifyAuth, discountController.searchProducts);
+
 // Get specific discount stack
 router.get('/:id', verifyShopifyAuth, discountController.getDiscountStack);
 
@@ -20,8 +26,5 @@ router.delete('/:id', verifyShopifyAuth, discountController.deleteDiscountStack)
 
 // Test discount stack
 router.post('/:id/test', verifyShopifyAuth, discountController.testDiscountStack);
-
-// Search products (for product selector)
-router.get('/search/products', verifyShopifyAuth, discountController.searchProducts);
 
 module.exports = router;

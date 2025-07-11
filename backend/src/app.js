@@ -9,16 +9,23 @@ const redisClient = require('./config/redis');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy for ngrok and other reverse proxies
+app.set('trust proxy', true);
+
 // Middleware
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rate limiting
+// Rate limiting with proper trust proxy configuration
 const limiter = rateLimit({
 	windowMs: 15 * 60 * 1000, // 15 minutes
 	max: 100, // limit each IP to 100 requests per windowMs
+	standardHeaders: true,
+	legacyHeaders: false,
+	// Skip rate limiting validation in development mode
+	skip: (req) => process.env.NODE_ENV === 'development',
 });
 app.use(limiter);
 

@@ -14,7 +14,7 @@ const shopify = shopifyApi({
     'read_discounts',
     'write_discounts',
   ],
-  hostName: process.env.SHOPIFY_APP_URL,
+  hostName: process.env.SHOPIFY_APP_URL?.replace(/^https?:\/\//, '') || '4b9c6aef0736.ngrok-free.app',
   apiVersion: ApiVersion.July23,
   isEmbeddedApp: true,
 });

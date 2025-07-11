@@ -483,13 +483,14 @@ const discountController = {
 				return res.json({ products: [] });
 			}
 
-			// Get the shop session for Shopify API calls
-			const session = await shopify.config.sessionStorage.findSessionsByShop(shop);
-			if (!session || session.length === 0) {
+			// Use session from auth middleware
+			if (!req.session) {
 				return res.status(401).json({ error: 'Shop session not found' });
 			}
 
-			const client = new shopify.clients.Graphql({ session: session[0] });
+			// Use real Shopify API for all requests now that we have proper sessions
+
+			const client = new shopify.clients.Graphql({ session: req.session });
 
 			// Search products using GraphQL
 			const searchQuery = `
@@ -537,10 +538,10 @@ const discountController = {
 				gid: edge.node.id,
 				title: edge.node.title,
 				handle: edge.node.handle,
-				image: edge.node.featuredImage?.url || null,
-				imageAlt: edge.node.featuredImage?.altText || '',
-				minPrice: edge.node.priceRangeV2.minVariantPrice.amount,
-				maxPrice: edge.node.priceRangeV2.maxVariantPrice.amount,
+				imageUrl: edge.node.featuredImage?.url || 'https://via.placeholder.com/100x100?text=No+Image',
+				imageAlt: edge.node.featuredImage?.altText || edge.node.title,
+				minPrice: parseFloat(edge.node.priceRangeV2.minVariantPrice.amount),
+				maxPrice: parseFloat(edge.node.priceRangeV2.maxVariantPrice.amount),
 				currency: edge.node.priceRangeV2.minVariantPrice.currencyCode,
 				status: edge.node.status
 			}));
@@ -549,6 +550,101 @@ const discountController = {
 		} catch (error) {
 			console.error('Error searching products:', error);
 			res.status(500).json({ error: 'Failed to search products' });
+		}
+	},
+
+	// Get all products for bulk selection
+	getAllProducts: async (req, res) => {
+		try {
+			const { shop } = req.query;
+			
+			// Validate and constrain limit parameter
+			let limit = parseInt(req.query.limit);
+			if (isNaN(limit) || limit < 1 || limit > 100) {
+				limit = 100; // Default to 100 if invalid or out of bounds
+			}
+
+			if (!shop) {
+				return res.status(400).json({ error: 'Shop parameter is required' });
+			}
+
+			// Use session from auth middleware
+			if (!req.session) {
+				return res.status(401).json({ error: 'Shop session not found' });
+			}
+
+			// Use real Shopify API for all requests now that we have proper sessions
+			const client = new shopify.clients.Graphql({ session: req.session });
+
+			// Get all products using GraphQL
+			const allProductsQuery = `
+				query getAllProducts($first: Int!) {
+					products(first: $first, sortKey: TITLE) {
+						edges {
+							node {
+								id
+								legacyResourceId
+								title
+								handle
+								status
+								featuredImage {
+									url
+									altText
+								}
+								priceRangeV2 {
+									minVariantPrice {
+										amount
+										currencyCode
+									}
+									maxVariantPrice {
+										amount
+										currencyCode
+									}
+								}
+								totalInventory
+							}
+						}
+						pageInfo {
+							hasNextPage
+							endCursor
+						}
+					}
+				}
+			`;
+
+			const response = await client.query({
+				data: {
+					query: allProductsQuery,
+					variables: {
+						first: limit
+					}
+				}
+			});
+
+			const products = response.body.data.products.edges.map(edge => ({
+				id: edge.node.legacyResourceId,
+				gid: edge.node.id,
+				title: edge.node.title,
+				handle: edge.node.handle,
+				imageUrl: edge.node.featuredImage?.url || 'https://via.placeholder.com/100x100?text=No+Image',
+				imageAlt: edge.node.featuredImage?.altText || edge.node.title,
+				minPrice: parseFloat(edge.node.priceRangeV2.minVariantPrice.amount),
+				maxPrice: parseFloat(edge.node.priceRangeV2.maxVariantPrice.amount),
+				currency: edge.node.priceRangeV2.minVariantPrice.currencyCode,
+				status: edge.node.status,
+				inventory: edge.node.totalInventory || 0
+			}));
+
+			const hasNextPage = response.body.data.products.pageInfo.hasNextPage;
+			
+			res.json({ 
+				products, 
+				hasNextPage,
+				totalCount: products.length 
+			});
+		} catch (error) {
+			console.error('Error fetching all products:', error);
+			res.status(500).json({ error: 'Failed to fetch products' });
 		}
 	},
 };
