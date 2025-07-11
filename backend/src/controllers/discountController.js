@@ -357,11 +357,12 @@ const discountController = {
 							meetsCondition: testData.quantity >= buyQuantity
 						});
 
-						// Calculate how many complete buy sets exist
-						const completeBuySets = Math.floor(testData.quantity / buyQuantity);
+						// Calculate how many complete BOGO cycles exist
+						// Each cycle requires (buyQuantity + getQuantity) total items
+						const completeBogoSets = Math.floor(testData.quantity / (buyQuantity + getQuantity));
 						
-						// Calculate total free items (before any limits)
-						let totalFreeItems = completeBuySets * getQuantity;
+						// Calculate total free items from complete cycles
+						let totalFreeItems = completeBogoSets * getQuantity;
 
 						// Apply per-order limit if specified
 						const limitApplied = limitPerOrder && totalFreeItems > limitPerOrder;
@@ -377,8 +378,8 @@ const discountController = {
 							appliedDiscount.bogoDetails = {
 								buyQuantity,
 								getQuantity,
-								completeBuySets,
-								totalFreeItemsBeforeLimit: completeBuySets * getQuantity,
+								completeBuySets: completeBogoSets,
+								totalFreeItemsBeforeLimit: completeBogoSets * getQuantity,
 								limitApplied
 							};
 
@@ -386,8 +387,8 @@ const discountController = {
 								totalQuantity: testData.quantity,
 								buyQuantity,
 								getQuantity,
-								completeBuySets,
-								totalFreeItemsBeforeLimit: completeBuySets * getQuantity,
+								completeBogoSets,
+								totalFreeItemsBeforeLimit: completeBogoSets * getQuantity,
 								totalFreeItems,
 								pricePerItem,
 								discountAmount,
