@@ -15,13 +15,15 @@ import {
   VerticalStack,
   HorizontalStack
 } from '@shopify/polaris';
+import ProductSelector from './ProductSelector';
+import SimpleIdSelector from './SimpleIdSelector';
 
 const TestDiscountModal = ({ open, onClose, discountStack, onTest }) => {
   const [testData, setTestData] = useState({
     cartTotal: '',
     itemQuantity: '',
-    productIds: '',
-    collectionIds: '',
+    productIds: [],
+    collectionIds: [],
     customerSegment: '',
     shippingCost: '',
     taxRate: ''
@@ -61,8 +63,8 @@ const TestDiscountModal = ({ open, onClose, discountStack, onTest }) => {
       const testPayload = {
         originalPrice: parseFloat(testData.cartTotal),
         quantity: testData.itemQuantity ? parseInt(testData.itemQuantity) : 1,
-        productIds: testData.productIds ? testData.productIds.split(',').map(id => id.trim()).filter(Boolean) : [],
-        collectionIds: testData.collectionIds ? testData.collectionIds.split(',').map(id => id.trim()).filter(Boolean) : [],
+        productIds: Array.isArray(testData.productIds) ? testData.productIds : [],
+        collectionIds: Array.isArray(testData.collectionIds) ? testData.collectionIds : [],
         customerSegment: testData.customerSegment,
         shippingCost: testData.shippingCost ? parseFloat(testData.shippingCost) : 0,
         taxRate: testData.taxRate ? parseFloat(testData.taxRate) / 100 : 0
@@ -83,8 +85,8 @@ const TestDiscountModal = ({ open, onClose, discountStack, onTest }) => {
     setTestData({
       cartTotal: '',
       itemQuantity: '',
-      productIds: '',
-      collectionIds: '',
+      productIds: [],
+      collectionIds: [],
       customerSegment: '',
       shippingCost: '',
       taxRate: ''
@@ -154,22 +156,21 @@ const TestDiscountModal = ({ open, onClose, discountStack, onTest }) => {
                 autoComplete="off"
               />
               
-              <TextField
+              <ProductSelector
                 label="Product IDs"
                 value={testData.productIds}
-                onChange={handleInputChange('productIds')}
-                placeholder="product-1, product-2"
-                helpText="Comma-separated product IDs (optional)"
-                autoComplete="off"
+                onChange={(value) => setTestData(prev => ({ ...prev, productIds: value }))}
+                placeholder="Search for products to test..."
+                helpText="Select products to test discount conditions (optional)"
               />
               
-              <TextField
+              <SimpleIdSelector
                 label="Collection IDs"
                 value={testData.collectionIds}
-                onChange={handleInputChange('collectionIds')}
-                placeholder="collection-1, collection-2"
-                helpText="Comma-separated collection IDs (optional)"
-                autoComplete="off"
+                onChange={(value) => setTestData(prev => ({ ...prev, collectionIds: value }))}
+                placeholder="Enter collection IDs..."
+                helpText="Select collections to test discount conditions (optional)"
+                idType="Collection"
               />
               
               <TextField

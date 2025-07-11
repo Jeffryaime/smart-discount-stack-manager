@@ -188,7 +188,13 @@ function DiscountStacks() {
 		}) || [];
 
 	const rows = filteredStacks.map((stack, index) => [
-		stack.name,
+		<Button
+			plain
+			onClick={() => navigate(`/discount-stacks/${stack._id}/edit`)}
+			textAlign="left"
+		>
+			{stack.name}
+		</Button>,
 		stack.description || '-',
 		stack.isActive ? (
 			<Badge status="success">Active</Badge>
@@ -225,7 +231,23 @@ function DiscountStacks() {
 
 	return (
 		<Page
-			title="Discount Stacks"
+			title={
+				<div
+					onClick={() => navigate('/')}
+					style={{
+						cursor: 'pointer',
+						fontSize: '24px',
+						fontWeight: '600',
+						color: '#202223',
+						lineHeight: '1.2',
+						userSelect: 'none'
+					}}
+					onMouseEnter={(e) => e.target.style.color = '#0969da'}
+					onMouseLeave={(e) => e.target.style.color = '#202223'}
+				>
+					Discount Stacks
+				</div>
+			}
 			primaryAction={{
 				content: 'Create Discount Stack',
 				onAction: () => navigate('/discount-stacks/create'),

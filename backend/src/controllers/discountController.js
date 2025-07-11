@@ -2,6 +2,22 @@ const DiscountStack = require('../models/DiscountStack');
 const { shopify } = require('../config/shopify');
 const { validateDiscountStackData } = require('../utils/validation');
 
+// Helper function to validate product IDs
+const validateProductIds = (productIds) => {
+	if (!Array.isArray(productIds)) {
+		return [];
+	}
+	
+	const productIdRegex = /^(?:\d+|gid:\/\/shopify\/Product\/\d+)$/;
+	return productIds.filter(id => {
+		if (typeof id !== 'string' || !productIdRegex.test(id)) {
+			console.warn(`Invalid product ID format: "${id}"`);
+			return false;
+		}
+		return true;
+	});
+};
+
 const discountController = {
 	async getDiscountStacks(req, res) {
 		try {
@@ -42,8 +58,8 @@ const discountController = {
 							discountWithoutId.bogoConfig = {
 								buyQuantity: discountWithoutId.bogoConfig?.buyQuantity || discountWithoutId.value || 1,
 								getQuantity: discountWithoutId.bogoConfig?.getQuantity || 1,
-								eligibleProductIds: discountWithoutId.bogoConfig?.eligibleProductIds || [],
-								freeProductIds: discountWithoutId.bogoConfig?.freeProductIds || [],
+								eligibleProductIds: validateProductIds(discountWithoutId.bogoConfig?.eligibleProductIds || []),
+								freeProductIds: validateProductIds(discountWithoutId.bogoConfig?.freeProductIds || []),
 								limitPerOrder: discountWithoutId.bogoConfig?.limitPerOrder || null,
 								...discountWithoutId.bogoConfig
 							};
@@ -129,8 +145,8 @@ const discountController = {
 									discountWithoutId.bogoConfig = {
 										buyQuantity: discountWithoutId.bogoConfig?.buyQuantity || discountWithoutId.value || 1,
 										getQuantity: discountWithoutId.bogoConfig?.getQuantity || 1,
-										eligibleProductIds: discountWithoutId.bogoConfig?.eligibleProductIds || [],
-										freeProductIds: discountWithoutId.bogoConfig?.freeProductIds || [],
+										eligibleProductIds: validateProductIds(discountWithoutId.bogoConfig?.eligibleProductIds || []),
+										freeProductIds: validateProductIds(discountWithoutId.bogoConfig?.freeProductIds || []),
 										limitPerOrder: discountWithoutId.bogoConfig?.limitPerOrder || null,
 										...discountWithoutId.bogoConfig
 									};
@@ -455,6 +471,84 @@ const discountController = {
 		} catch (error) {
 			console.error('Error testing discount stack:', error);
 			res.status(500).json({ error: 'Failed to test discount stack' });
+		}
+	},
+
+	async searchProducts(req, res) {
+		try {
+			const { shop } = req.query;
+			const { query, limit = 50 } = req.query;
+
+			if (!query || query.trim().length < 2) {
+				return res.json({ products: [] });
+			}
+
+			// Get the shop session for Shopify API calls
+			const session = await shopify.config.sessionStorage.findSessionsByShop(shop);
+			if (!session || session.length === 0) {
+				return res.status(401).json({ error: 'Shop session not found' });
+			}
+
+			const client = new shopify.clients.Graphql({ session: session[0] });
+
+			// Search products using GraphQL
+			const searchQuery = `
+				query searchProducts($query: String!, $first: Int!) {
+					products(first: $first, query: $query) {
+						edges {
+							node {
+								id
+								legacyResourceId
+								title
+								handle
+								featuredImage {
+									url
+									altText
+								}
+								priceRangeV2 {
+									minVariantPrice {
+										amount
+										currencyCode
+									}
+									maxVariantPrice {
+										amount
+										currencyCode
+									}
+								}
+								status
+							}
+						}
+					}
+				}
+			`;
+
+			const response = await client.query({
+				data: {
+					query: searchQuery,
+					variables: {
+						query: query.trim(),
+						first: parseInt(limit)
+					}
+				}
+			});
+
+			const products = response.body.data.products.edges.map(edge => ({
+				id: edge.node.legacyResourceId,
+				gid: edge.node.id,
+				title: edge.node.title,
+				handle: edge.node.handle,
+				image: edge.node.featuredImage?.url || null,
+				imageAlt: edge.node.featuredImage?.altText || '',
+				minPrice: edge.node.priceRangeV2.minVariantPrice.amount,
+				maxPrice: edge.node.priceRangeV2.maxVariantPrice.amount,
+				currency: edge.node.priceRangeV2.minVariantPrice.currencyCode,
+				status: edge.node.status
+			}));
+
+			res.json({ products });
+		} catch (error) {
+			console.error('Error searching products:', error);
+			res.status(500).json({ error: 'Failed to search products' });
 		}
 	},
 };

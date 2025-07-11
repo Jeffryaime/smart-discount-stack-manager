@@ -21,4 +21,7 @@ router.delete('/:id', verifyShopifyAuth, discountController.deleteDiscountStack)
 // Test discount stack
 router.post('/:id/test', verifyShopifyAuth, discountController.testDiscountStack);
 
+// Search products (for product selector)
+router.get('/search/products', verifyShopifyAuth, discountController.searchProducts);
+
 module.exports = router;

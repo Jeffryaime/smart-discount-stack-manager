@@ -11,6 +11,7 @@ import {
   Checkbox,
   Banner,
 } from '@shopify/polaris';
+import ProductSelector from './ProductSelector';
 
 function DiscountRuleForm({ discounts = [], onChange, error }) {
   const discountTypes = [
@@ -287,21 +288,21 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                           <Text variant="bodySm" tone="subdued">BOGO Specific Options</Text>
                           <HorizontalStack gap="4">
                             <div style={{ flex: 1 }}>
-                              <TextField
-                                label="Eligible Product IDs"
-                                value={discount.bogoConfig?.eligibleProductIds?.join(', ') || ''}
-                                onChange={(value) => updateDiscount(index, 'bogoConfig.eligibleProductIds', validateAndParseProductIds(value))}
-                                helpText="Product IDs for X items (comma separated) - numeric or gid://shopify/Product/123 format"
-                                placeholder="e.g., 123, 456, gid://shopify/Product/789"
+                              <ProductSelector
+                                label="Eligible Products (Buy X)"
+                                value={discount.bogoConfig?.eligibleProductIds || []}
+                                onChange={(value) => updateDiscount(index, 'bogoConfig.eligibleProductIds', value)}
+                                helpText="Products that qualify for the 'Buy X' part of the offer. Leave empty to allow any product."
+                                placeholder="Search for products to buy..."
                               />
                             </div>
                             <div style={{ flex: 1 }}>
-                              <TextField
-                                label="Free Product IDs"
-                                value={discount.bogoConfig?.freeProductIds?.join(', ') || ''}
-                                onChange={(value) => updateDiscount(index, 'bogoConfig.freeProductIds', validateAndParseProductIds(value))}
-                                helpText="Product IDs for Y free items (comma separated) - numeric or gid://shopify/Product/123 format"
-                                placeholder="e.g., 123, 456, gid://shopify/Product/789"
+                              <ProductSelector
+                                label="Free Products (Get Y)"
+                                value={discount.bogoConfig?.freeProductIds || []}
+                                onChange={(value) => updateDiscount(index, 'bogoConfig.freeProductIds', value)}
+                                helpText="Products that customers get for free. Leave empty to use the same products as 'Buy X'."
+                                placeholder="Search for free products..."
                               />
                             </div>
                           </HorizontalStack>

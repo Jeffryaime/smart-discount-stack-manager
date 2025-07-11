@@ -58,6 +58,13 @@ export const discountStacksApi = {
     const response = await apiClient.post(`/discounts/${id}/test`, { testData });
     return response.data;
   },
+
+  searchProducts: async (query, limit = 50) => {
+    const response = await apiClient.get('/discounts/search/products', {
+      params: { query, limit }
+    });
+    return response.data;
+  },
 };
 
 export default apiClient;
