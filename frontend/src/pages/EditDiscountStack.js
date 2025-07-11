@@ -20,6 +20,7 @@ import {
 	useUpdateDiscountStack,
 } from '../hooks/useDiscountStacks';
 import DiscountRuleForm from '../components/DiscountRuleForm';
+import { navigateWithShop } from '../utils/navigation';
 
 // Helper function to safely parse date strings
 const parseDateString = (dateString) => {
@@ -126,7 +127,7 @@ function EditDiscountStack() {
 			{ id, data: formData },
 			{
 				onSuccess: () => {
-					navigate('/discount-stacks');
+					navigateWithShop(navigate, '/discount-stacks');
 				},
 				onError: (error) => {
 					console.error('Error updating discount stack:', error);
@@ -231,7 +232,7 @@ function EditDiscountStack() {
 					<p>Error loading discount stack: {error.message}</p>
 				</Banner>
 				<HorizontalStack align="end">
-					<Button onClick={() => navigate('/discount-stacks')}>
+					<Button onClick={() => navigateWithShop(navigate, '/discount-stacks')}>
 						Back to Discount Stacks
 					</Button>
 				</HorizontalStack>
@@ -356,7 +357,7 @@ function EditDiscountStack() {
 
 					<div style={{ padding: '24px', borderTop: '1px solid #e1e3e5', backgroundColor: '#fafbfb' }}>
 						<HorizontalStack align="end" gap="3">
-							<Button onClick={() => navigate('/discount-stacks')} size="large">
+							<Button onClick={() => navigateWithShop(navigate, '/discount-stacks')} size="large">
 								Cancel
 							</Button>
 							<Button primary submit loading={updateDiscountStack.isLoading} size="large">

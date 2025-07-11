@@ -15,6 +15,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useCreateDiscountStack } from '../hooks/useDiscountStacks';
 import DiscountRuleForm from '../components/DiscountRuleForm';
+import { navigateWithShop } from '../utils/navigation';
 
 function CreateDiscountStack() {
 	const navigate = useNavigate();
@@ -49,7 +50,7 @@ function CreateDiscountStack() {
 		createDiscountStack.mutate(formData, {
 			onSuccess: (data) => {
 				console.log('Success:', data);
-				navigate('/discount-stacks');
+				navigateWithShop(navigate, '/discount-stacks');
 			},
 			onError: (error) => {
 				console.error('Error creating discount stack:', error);
@@ -209,7 +210,7 @@ function CreateDiscountStack() {
 
 					<div style={{ padding: '24px', borderTop: '1px solid #e1e3e5', backgroundColor: '#fafbfb' }}>
 						<HorizontalStack align="end" gap="3">
-							<Button onClick={() => navigate('/discount-stacks')} size="large">
+							<Button onClick={() => navigateWithShop(navigate, '/discount-stacks')} size="large">
 								Cancel
 							</Button>
 							<Button primary submit loading={createDiscountStack.isLoading} size="large">

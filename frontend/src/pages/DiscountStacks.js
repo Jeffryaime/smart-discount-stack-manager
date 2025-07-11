@@ -26,10 +26,14 @@ import {
 } from '../hooks/useDiscountStacks';
 import TestDiscountModal from '../components/TestDiscountModal';
 import { discountStacksApi } from '../services/api';
+import { navigateWithShop } from '../utils/navigation';
 
 function DiscountStacks() {
 	const navigate = useNavigate();
 	const { data: discountStacks, isLoading } = useDiscountStacks();
+	
+	// Ensure discountStacks is an array
+	const stacksArray = Array.isArray(discountStacks) ? discountStacks : [];
 	const deleteDiscountStack = useDeleteDiscountStack();
 	const bulkDeleteDiscountStacks = useBulkDeleteDiscountStacks();
 	const bulkUpdateDiscountStacks = useBulkUpdateDiscountStacks();
@@ -174,7 +178,7 @@ function DiscountStacks() {
 	};
 
 	const filteredStacks =
-		discountStacks?.filter((stack) => {
+		stacksArray?.filter((stack) => {
 			if (!stack || !stack.name) return false;
 
 			const matchesSearch = stack.name
@@ -190,7 +194,7 @@ function DiscountStacks() {
 	const rows = filteredStacks.map((stack, index) => [
 		<Button
 			plain
-			onClick={() => navigate(`/discount-stacks/${stack._id}/edit`)}
+			onClick={() => navigateWithShop(navigate, `/discount-stacks/${stack._id}/edit`)}
 			textAlign="left"
 		>
 			{stack.name}
@@ -215,7 +219,7 @@ function DiscountStacks() {
 			/>
 			<Button
 				plain
-				onClick={() => navigate(`/discount-stacks/${stack._id}/edit`)}
+				onClick={() => navigateWithShop(navigate, `/discount-stacks/${stack._id}/edit`)}
 				accessibilityLabel="Edit discount stack"
 				icon={<Icon source={EditMajor} />}
 			/>
@@ -233,7 +237,7 @@ function DiscountStacks() {
 		<Page
 			title={
 				<div
-					onClick={() => navigate('/')}
+					onClick={() => navigateWithShop(navigate, '/')}
 					style={{
 						cursor: 'pointer',
 						fontSize: '24px',
@@ -250,7 +254,7 @@ function DiscountStacks() {
 			}
 			primaryAction={{
 				content: 'Create Discount Stack',
-				onAction: () => navigate('/discount-stacks/create'),
+				onAction: () => navigateWithShop(navigate, '/discount-stacks/create'),
 			}}
 		>
 			<Card>
@@ -391,7 +395,7 @@ function DiscountStacks() {
 									) : (
 										<Button
 											primary
-											onClick={() => navigate('/discount-stacks/create')}
+											onClick={() => navigateWithShop(navigate, '/discount-stacks/create')}
 										>
 											Create your first discount stack
 										</Button>

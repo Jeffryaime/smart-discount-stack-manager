@@ -12,7 +12,7 @@ import {
   Banner,
   RadioButton,
 } from '@shopify/polaris';
-import ProductSelector from './ProductSelector';
+import UnifiedProductSelector from './UnifiedProductSelector';
 
 function DiscountRuleForm({ discounts = [], onChange, error }) {
   const discountTypes = [
@@ -337,23 +337,23 @@ function DiscountRuleForm({ discounts = [], onChange, error }) {
                           
                           <HorizontalStack gap="4">
                             <div style={{ flex: 1 }}>
-                              <ProductSelector
+                              <UnifiedProductSelector
                                 label="Eligible Products (Buy X)"
                                 value={discount.bogoConfig?.eligibleProductIds || []}
                                 onChange={(value) => updateDiscount(index, 'bogoConfig.eligibleProductIds', value)}
-                                helpText="Products that qualify for the 'Buy X' part of the offer. Leave empty to allow any product."
-                                placeholder="Search for products to buy..."
+                                helpText="Products that qualify for the 'Buy X' part of the offer. Search by products, collections, or SKUs."
+                                mode="products"
                               />
                             </div>
                             <div style={{ flex: 1 }}>
-                              <ProductSelector
+                              <UnifiedProductSelector
                                 label="Free Products (Get Y)"
                                 value={discount.bogoConfig?.freeProductIds || []}
                                 onChange={(value) => updateDiscount(index, 'bogoConfig.freeProductIds', value)}
                                 helpText={discount.bogoConfig?.freeProductMode === 'cheapest' 
                                   ? "This field is ignored when auto-discounting cheapest item" 
-                                  : "Products that customers get for free. Leave empty to use the same products as 'Buy X'."}
-                                placeholder="Search for free products..."
+                                  : "Products that customers get for free. Leave empty to use the same products as 'Buy X'. Search by products, collections, or SKUs."}
+                                mode="products"
                                 disabled={discount.bogoConfig?.freeProductMode === 'cheapest'}
                               />
                             </div>

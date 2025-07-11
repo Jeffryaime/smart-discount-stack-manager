@@ -16,13 +16,17 @@ import {
 } from '@shopify/polaris-icons';
 import { useNavigate } from 'react-router-dom';
 import { useDiscountStacks } from '../hooks/useDiscountStacks';
+import { navigateWithShop } from '../utils/navigation';
 
 function Dashboard() {
 	const navigate = useNavigate();
 	const { data: discountStacks, isLoading, error } = useDiscountStacks();
 
+	// Ensure discountStacks is an array
+	const stacksArray = Array.isArray(discountStacks) ? discountStacks : [];
+
 	const rows =
-		discountStacks?.slice(0, 5).map((stack) => [
+		stacksArray?.slice(0, 5).map((stack) => [
 			stack.name,
 			stack.isActive ? (
 				<Badge status="success">Active</Badge>
@@ -33,7 +37,7 @@ function Dashboard() {
 			stack.usageCount || 0,
 			<Button
 				plain
-				onClick={() => navigate(`/discount-stacks/${stack._id}/edit`)}
+				onClick={() => navigateWithShop(navigate, `/discount-stacks/${stack._id}/edit`)}
 				accessibilityLabel="Edit discount stack"
 				icon={<Icon source={EditMajor} />}
 			/>,
@@ -48,7 +52,7 @@ function Dashboard() {
 					if (process.env.NODE_ENV === 'development') {
 						console.log('Primary action clicked');
 					}
-					navigate('/discount-stacks/create');
+					navigateWithShop(navigate, '/discount-stacks/create');
 				},
 			}}
 		>
@@ -75,7 +79,7 @@ function Dashboard() {
 												window.location.pathname
 											);
 											try {
-												navigate('/discount-stacks/create');
+												navigateWithShop(navigate, '/discount-stacks/create');
 												console.log('Navigation called successfully');
 											} catch (error) {
 												console.error('Navigation error:', error);
@@ -92,7 +96,7 @@ function Dashboard() {
 												window.location.pathname
 											);
 											try {
-												navigate('/discount-stacks');
+												navigateWithShop(navigate, '/discount-stacks');
 												console.log('Navigation called successfully');
 											} catch (error) {
 												console.error('Navigation error:', error);
