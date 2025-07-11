@@ -3,7 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
-const connectDB = require('./config/database');
+const { connectDB } = require('./config/database');
 const redisClient = require('./config/redis');
 
 const app = express();

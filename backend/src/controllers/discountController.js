@@ -3,6 +3,24 @@ const { shopify } = require('../config/shopify');
 const { validateDiscountStackData } = require('../utils/validation');
 const BOGOCalculator = require('../utils/bogoCalculator');
 
+// Helper function to validate limit parameter
+const validateLimit = (limitParam) => {
+	const limit = parseInt(limitParam);
+	if (isNaN(limit) || limit < 1 || limit > 100) {
+		return 100;
+	}
+	return limit;
+};
+
+// Helper function to safely parse float values
+const safeParseFloat = (value, defaultValue = 0) => {
+	if (value === null || value === undefined) {
+		return defaultValue;
+	}
+	const parsed = parseFloat(value);
+	return isNaN(parsed) ? defaultValue : parsed;
+};
+
 // Helper function to validate product IDs
 const validateProductIds = (productIds) => {
 	if (!Array.isArray(productIds)) {
@@ -578,8 +596,8 @@ const discountController = {
 				handle: edge.node.handle,
 				imageUrl: edge.node.featuredImage?.url || 'https://via.placeholder.com/100x100?text=No+Image',
 				imageAlt: edge.node.featuredImage?.altText || edge.node.title,
-				minPrice: parseFloat(edge.node.priceRangeV2.minVariantPrice.amount),
-				maxPrice: parseFloat(edge.node.priceRangeV2.maxVariantPrice.amount),
+				minPrice: safeParseFloat(edge.node.priceRangeV2.minVariantPrice.amount, 0),
+				maxPrice: safeParseFloat(edge.node.priceRangeV2.maxVariantPrice.amount, 0),
 				currency: edge.node.priceRangeV2.minVariantPrice.currencyCode,
 				status: edge.node.status
 			}));
@@ -597,10 +615,7 @@ const discountController = {
 			const { shop } = req.query;
 			
 			// Validate and constrain limit parameter
-			let limit = parseInt(req.query.limit);
-			if (isNaN(limit) || limit < 1 || limit > 100) {
-				limit = 100; // Default to 100 if invalid or out of bounds
-			}
+			const limit = validateLimit(req.query.limit);
 
 			if (!shop) {
 				return res.status(400).json({ error: 'Shop parameter is required' });
@@ -614,7 +629,7 @@ const discountController = {
 			// Use real Shopify API for all requests now that we have proper sessions
 			const client = new shopify.clients.Graphql({ session: req.session });
 
-			// Get all products using GraphQL
+			// Get all products using GraphQL with enhanced metadata
 			const allProductsQuery = `
 				query getAllProducts($first: Int!) {
 					products(first: $first, sortKey: TITLE) {
@@ -625,6 +640,9 @@ const discountController = {
 								title
 								handle
 								status
+								vendor
+								productType
+								tags
 								featuredImage {
 									url
 									altText
@@ -640,6 +658,7 @@ const discountController = {
 									}
 								}
 								totalInventory
+								tracksInventory
 							}
 						}
 						pageInfo {
@@ -664,13 +683,17 @@ const discountController = {
 				gid: edge.node.id,
 				title: edge.node.title,
 				handle: edge.node.handle,
+				vendor: edge.node.vendor,
+				productType: edge.node.productType,
+				tags: edge.node.tags,
 				imageUrl: edge.node.featuredImage?.url || 'https://via.placeholder.com/100x100?text=No+Image',
 				imageAlt: edge.node.featuredImage?.altText || edge.node.title,
-				minPrice: parseFloat(edge.node.priceRangeV2.minVariantPrice.amount),
-				maxPrice: parseFloat(edge.node.priceRangeV2.maxVariantPrice.amount),
+				minPrice: safeParseFloat(edge.node.priceRangeV2.minVariantPrice.amount, 0),
+				maxPrice: safeParseFloat(edge.node.priceRangeV2.maxVariantPrice.amount, 0),
 				currency: edge.node.priceRangeV2.minVariantPrice.currencyCode,
 				status: edge.node.status,
-				inventory: edge.node.totalInventory || 0
+				inventory: edge.node.totalInventory || 0,
+				tracksInventory: edge.node.tracksInventory
 			}));
 
 			const hasNextPage = response.body.data.products.pageInfo.hasNextPage;
@@ -683,6 +706,448 @@ const discountController = {
 		} catch (error) {
 			console.error('Error fetching all products:', error);
 			res.status(500).json({ error: 'Failed to fetch products' });
+		}
+	},
+
+	// Get all collections
+	getAllCollections: async (req, res) => {
+		try {
+			const { shop } = req.query;
+			
+			const limit = validateLimit(req.query.limit);
+
+			if (!shop) {
+				return res.status(400).json({ error: 'Shop parameter is required' });
+			}
+
+			if (!req.session) {
+				return res.status(401).json({ error: 'Shop session not found' });
+			}
+
+			const client = new shopify.clients.Graphql({ session: req.session });
+
+			const collectionsQuery = `
+				query getAllCollections($first: Int!) {
+					collections(first: $first, sortKey: TITLE) {
+						edges {
+							node {
+								id
+								legacyResourceId
+								title
+								handle
+								description
+								productsCount {
+									count
+								}
+								image {
+									url
+									altText
+								}
+								ruleSet {
+									appliedDisjunctively
+									rules {
+										column
+										relation
+										condition
+									}
+								}
+							}
+						}
+						pageInfo {
+							hasNextPage
+							endCursor
+						}
+					}
+				}
+			`;
+
+			const response = await client.query({
+				data: {
+					query: collectionsQuery,
+					variables: {
+						first: limit
+					}
+				}
+			});
+
+			const collections = response.body.data.collections.edges.map(edge => ({
+				id: edge.node.legacyResourceId,
+				gid: edge.node.id,
+				title: edge.node.title,
+				handle: edge.node.handle,
+				description: edge.node.description,
+				productsCount: edge.node.productsCount.count,
+				imageUrl: edge.node.image?.url || 'https://via.placeholder.com/100x100?text=Collection',
+				imageAlt: edge.node.image?.altText || edge.node.title,
+				isSmartCollection: edge.node.ruleSet ? true : false
+			}));
+
+			const hasNextPage = response.body.data.collections.pageInfo.hasNextPage;
+			
+			res.json({ 
+				collections, 
+				hasNextPage,
+				totalCount: collections.length 
+			});
+		} catch (error) {
+			console.error('Error fetching collections:', error);
+			
+			// Handle GraphQL-specific errors
+			if (error.response?.body?.errors) {
+				const graphqlErrors = error.response.body.errors;
+				
+				// Check for rate limiting (throttling)
+				const throttledError = graphqlErrors.find(err => 
+					err.extensions?.code === 'THROTTLED'
+				);
+				
+				if (throttledError) {
+					const retryAfter = error.response.headers?.['retry-after'] || 60;
+					return res.status(429)
+						.set('Retry-After', retryAfter)
+						.json({ 
+							error: 'Rate limit exceeded. Please retry after specified time.',
+							retryAfter: retryAfter
+						});
+				}
+				
+				// Handle other GraphQL errors (field errors, validation, etc.)
+				const firstError = graphqlErrors[0];
+				return res.status(400).json({ 
+					error: firstError.message || 'GraphQL query error'
+				});
+			}
+			
+			// Generic server error fallback
+			res.status(500).json({ error: 'Failed to fetch collections' });
+		}
+	},
+
+	// Search collections
+	searchCollections: async (req, res) => {
+		try {
+			const { shop } = req.query;
+			const { query, limit = 50 } = req.query;
+
+			if (!query || query.trim().length < 2) {
+				return res.json({ collections: [] });
+			}
+
+			if (!req.session) {
+				return res.status(401).json({ error: 'Shop session not found' });
+			}
+
+			const client = new shopify.clients.Graphql({ session: req.session });
+
+			const searchQuery = `
+				query searchCollections($query: String!, $first: Int!) {
+					collections(first: $first, query: $query) {
+						edges {
+							node {
+								id
+								legacyResourceId
+								title
+								handle
+								description
+								productsCount {
+									count
+								}
+								image {
+									url
+									altText
+								}
+							}
+						}
+					}
+				}
+			`;
+
+			const response = await client.query({
+				data: {
+					query: searchQuery,
+					variables: {
+						query: query.trim(),
+						first: parseInt(limit)
+					}
+				}
+			});
+
+			const collections = response.body.data.collections.edges.map(edge => ({
+				id: edge.node.legacyResourceId,
+				gid: edge.node.id,
+				title: edge.node.title,
+				handle: edge.node.handle,
+				description: edge.node.description,
+				productsCount: edge.node.productsCount.count,
+				imageUrl: edge.node.image?.url || 'https://via.placeholder.com/100x100?text=Collection',
+				imageAlt: edge.node.image?.altText || edge.node.title
+			}));
+
+			res.json({ collections });
+		} catch (error) {
+			console.error('Error searching collections:', error);
+			res.status(500).json({ error: 'Failed to search collections' });
+		}
+	},
+
+	// Get all product variants (SKUs)
+	getAllVariants: async (req, res) => {
+		try {
+			const { shop } = req.query;
+			
+			const limit = validateLimit(req.query.limit);
+
+			if (!shop) {
+				return res.status(400).json({ error: 'Shop parameter is required' });
+			}
+
+			if (!req.session) {
+				return res.status(401).json({ error: 'Shop session not found' });
+			}
+
+			const client = new shopify.clients.Graphql({ session: req.session });
+
+			const variantsQuery = `
+				query getAllVariants($first: Int!) {
+					productVariants(first: $first) {
+						edges {
+							node {
+								id
+								legacyResourceId
+								title
+								sku
+								price
+								compareAtPrice
+								availableForSale
+								inventoryQuantity
+								product {
+									id
+									legacyResourceId
+									title
+									handle
+									vendor
+									productType
+									featuredImage {
+										url
+										altText
+									}
+								}
+								image {
+									url
+									altText
+								}
+							}
+						}
+						pageInfo {
+							hasNextPage
+							endCursor
+						}
+					}
+				}
+			`;
+
+			const response = await client.query({
+				data: {
+					query: variantsQuery,
+					variables: {
+						first: limit
+					}
+				}
+			});
+
+			const variants = response.body.data.productVariants.edges.map(edge => ({
+				id: edge.node.legacyResourceId,
+				gid: edge.node.id,
+				title: edge.node.title,
+				sku: edge.node.sku || '',
+				price: safeParseFloat(edge.node.price, 0),
+				compareAtPrice: edge.node.compareAtPrice ? safeParseFloat(edge.node.compareAtPrice, null) : null,
+				availableForSale: edge.node.availableForSale,
+				inventoryQuantity: edge.node.inventoryQuantity || 0,
+				imageUrl: edge.node.image?.url || edge.node.product?.featuredImage?.url || 'https://via.placeholder.com/100x100?text=No+Image',
+				imageAlt: edge.node.image?.altText || edge.node.product?.featuredImage?.altText || edge.node.title,
+				product: {
+					id: edge.node.product?.legacyResourceId,
+					gid: edge.node.product?.id,
+					title: edge.node.product?.title,
+					handle: edge.node.product?.handle,
+					vendor: edge.node.product?.vendor,
+					productType: edge.node.product?.productType
+				}
+			}));
+
+			const hasNextPage = response.body.data.productVariants.pageInfo.hasNextPage;
+			
+			res.json({ 
+				variants, 
+				hasNextPage,
+				totalCount: variants.length 
+			});
+		} catch (error) {
+			console.error('Error fetching variants:', error);
+			res.status(500).json({ error: 'Failed to fetch variants' });
+		}
+	},
+
+	// Search variants by SKU or title
+	searchVariants: async (req, res) => {
+		try {
+			const { shop } = req.query;
+			const { query, limit = 50 } = req.query;
+
+			if (!query || query.trim().length < 2) {
+				return res.json({ variants: [] });
+			}
+
+			if (!req.session) {
+				return res.status(401).json({ error: 'Shop session not found' });
+			}
+
+			const client = new shopify.clients.Graphql({ session: req.session });
+
+			// Search by SKU first, then by product title
+			const searchQuery = `
+				query searchVariants($query: String!, $first: Int!) {
+					productVariants(first: $first, query: $query) {
+						edges {
+							node {
+								id
+								legacyResourceId
+								title
+								sku
+								price
+								compareAtPrice
+								availableForSale
+								inventoryQuantity
+								product {
+									id
+									legacyResourceId
+									title
+									handle
+									vendor
+									productType
+									featuredImage {
+										url
+										altText
+									}
+								}
+								image {
+									url
+									altText
+								}
+							}
+						}
+					}
+				}
+			`;
+
+			const response = await client.query({
+				data: {
+					query: searchQuery,
+					variables: {
+						query: query.trim(),
+						first: parseInt(limit)
+					}
+				}
+			});
+
+			const variants = response.body.data.productVariants.edges.map(edge => ({
+				id: edge.node.legacyResourceId,
+				gid: edge.node.id,
+				title: edge.node.title,
+				sku: edge.node.sku || '',
+				price: safeParseFloat(edge.node.price, 0),
+				compareAtPrice: edge.node.compareAtPrice ? safeParseFloat(edge.node.compareAtPrice, null) : null,
+				availableForSale: edge.node.availableForSale,
+				inventoryQuantity: edge.node.inventoryQuantity || 0,
+				imageUrl: edge.node.image?.url || edge.node.product?.featuredImage?.url || 'https://via.placeholder.com/100x100?text=No+Image',
+				imageAlt: edge.node.image?.altText || edge.node.product?.featuredImage?.altText || edge.node.title,
+				product: {
+					id: edge.node.product?.legacyResourceId,
+					gid: edge.node.product?.id,
+					title: edge.node.product?.title,
+					handle: edge.node.product?.handle,
+					vendor: edge.node.product?.vendor,
+					productType: edge.node.product?.productType
+				}
+			}));
+
+			res.json({ variants });
+		} catch (error) {
+			console.error('Error searching variants:', error);
+			res.status(500).json({ error: 'Failed to search variants' });
+		}
+	},
+
+	// Get filter metadata (vendors, types, tags)
+	getFilterMetadata: async (req, res) => {
+		try {
+			const { shop } = req.query;
+
+			if (!shop) {
+				return res.status(400).json({ error: 'Shop parameter is required' });
+			}
+
+			if (!req.session) {
+				return res.status(401).json({ error: 'Shop session not found' });
+			}
+
+			const client = new shopify.clients.Graphql({ session: req.session });
+
+			// Get unique vendors, product types, and tags from products
+			const metadataQuery = `
+				query getFilterMetadata($first: Int!) {
+					products(first: $first) {
+						edges {
+							node {
+								vendor
+								productType
+								tags
+							}
+						}
+					}
+				}
+			`;
+
+			const response = await client.query({
+				data: {
+					query: metadataQuery,
+					variables: {
+						// LIMITATION: Only fetches first 250 products for metadata extraction
+						// For shops with >250 products, some vendors/types/tags may be missing
+						// from filter options. Future enhancement should implement pagination
+						// or use Shopify's bulk operations API to fetch all products.
+						first: 250
+					}
+				}
+			});
+
+			const products = response.body.data.products.edges.map(edge => edge.node);
+			
+			// Extract unique values
+			const vendors = [...new Set(products.map(p => p.vendor).filter(Boolean))].sort();
+			const productTypes = [...new Set(products.map(p => p.productType).filter(Boolean))].sort();
+			const allTags = products.flatMap(p => p.tags || []);
+			const tags = [...new Set(allTags)].sort();
+
+			res.json({ 
+				vendors,
+				productTypes,
+				tags,
+				statusOptions: [
+					{ label: 'Active', value: 'ACTIVE' },
+					{ label: 'Draft', value: 'DRAFT' },
+					{ label: 'Archived', value: 'ARCHIVED' }
+				],
+				inventoryOptions: [
+					{ label: 'In Stock', value: 'in_stock' },
+					{ label: 'Low Stock', value: 'low_stock' },
+					{ label: 'Out of Stock', value: 'out_of_stock' }
+				]
+			});
+		} catch (error) {
+			console.error('Error fetching filter metadata:', error);
+			res.status(500).json({ error: 'Failed to fetch filter metadata' });
 		}
 	},
 };

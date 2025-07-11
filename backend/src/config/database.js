@@ -2,16 +2,58 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    const mongoUri = process.env.MONGODB_URI;
+    const environment = process.env.NODE_ENV || 'development';
+    
+    if (!mongoUri) {
+      throw new Error(`MONGODB_URI is not defined for environment: ${environment}`);
+    }
 
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    const conn = await mongoose.connect(mongoUri);
+
+    const dbName = conn.connection.db.databaseName;
+    console.log(`MongoDB Connected [${environment}]: ${conn.connection.host}/${dbName}`);
+    
+    // Log collection count for verification
+    const collections = await conn.connection.db.listCollections().toArray();
+    console.log(`Database collections: ${collections.length} found`);
+    
+    return conn;
   } catch (error) {
     console.error('Database connection error:', error);
-    process.exit(1);
+    if (process.env.NODE_ENV !== 'test') {
+      process.exit(1);
+    }
+    throw error;
   }
 };
 
-module.exports = connectDB;
+const disconnectDB = async () => {
+  try {
+    await mongoose.disconnect();
+    console.log('MongoDB disconnected');
+  } catch (error) {
+    console.error('Database disconnection error:', error);
+  }
+};
+
+const clearTestDB = async () => {
+  if (process.env.NODE_ENV === 'test') {
+    const collections = await mongoose.connection.db.listCollections().toArray();
+    
+    // Run all deleteMany operations in parallel for better performance
+    const clearPromises = collections.map(collection =>
+      mongoose.connection.db.collection(collection.name).deleteMany({})
+    );
+    
+    await Promise.all(clearPromises);
+    
+    console.log('Test database cleared');
+  }
+};
+
+module.exports = {
+  connectDB,
+  disconnectDB,
+  clearTestDB
+};
