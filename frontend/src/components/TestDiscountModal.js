@@ -342,9 +342,8 @@ const TestDiscountModal = ({ open, onClose, discountStack, onTest }) => {
                             )}
                             {discount.type === 'buy_x_get_y' && discount.bogoDetails && (
                               <Text variant="bodySm" color="subdued">
-                                Buy {discount.bogoDetails.buyQuantity} Get {discount.bogoDetails.getQuantity} • 
-                                Complete Sets: {discount.bogoDetails.completeSets} • 
-                                Extra Free: {discount.bogoDetails.extraFreeItems}
+                                Buy {discount.bogoDetails.buyQuantity || 1} Get {discount.bogoDetails.getQuantity || 1} • 
+                                Sets Applied: {discount.bogoDetails.completeBuySets || 0}
                                 {discount.bogoDetails.limitApplied && ' • Limit Applied'}
                               </Text>
                             )}

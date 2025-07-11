@@ -36,7 +36,7 @@ const discountController = {
 				discounts:
 					req.body.discounts?.map((discount) => {
 						const { _id, id, ...discountWithoutId } = discount;
-						
+
 						// Initialize bogoConfig for BOGO discounts
 						if (discountWithoutId.type === 'buy_x_get_y') {
 							discountWithoutId.bogoConfig = {
@@ -48,7 +48,7 @@ const discountController = {
 								...discountWithoutId.bogoConfig
 							};
 						}
-						
+
 						return discountWithoutId;
 					}) || [],
 			};
@@ -123,7 +123,7 @@ const discountController = {
 						discounts:
 							req.body.discounts?.map((discount) => {
 								const { _id, id, ...discountWithoutId } = discount;
-								
+
 								// Initialize bogoConfig for BOGO discounts
 								if (discountWithoutId.type === 'buy_x_get_y') {
 									discountWithoutId.bogoConfig = {
@@ -135,7 +135,7 @@ const discountController = {
 										...discountWithoutId.bogoConfig
 									};
 								}
-								
+
 								return discountWithoutId;
 							}) || [],
 				  };
@@ -185,7 +185,7 @@ const discountController = {
 
 	async testDiscountStack(req, res) {
 		try {
-			const { id } = req.params;
+      			const { id } = req.params;
 			const { shop } = req.query;
 			const { testData } = req.body;
 
@@ -210,7 +210,7 @@ const discountController = {
 
 			// Log the received test data for debugging
 			console.log('Received testData:', testData);
-			
+
 			// Calculate discounts
 			const appliedDiscounts = [];
 			const skippedDiscounts = [];
@@ -243,11 +243,11 @@ const discountController = {
 					testQuantity: testData.quantity,
 					testAmount: testData.originalPrice
 				});
-				
+
 				// Track if this discount failed to apply
 				let discountFailed = false;
 				let failureReason = '';
-				
+
 				// Check minimum amount condition
 				if (conditions.minimumAmount && testData.originalPrice < conditions.minimumAmount) {
 					discountFailed = true;
@@ -263,7 +263,7 @@ const discountController = {
 
 				// Check product IDs condition
 				if (!discountFailed && conditions.productIds && conditions.productIds.length > 0) {
-					const hasMatchingProduct = testData.productIds?.some(productId => 
+					const hasMatchingProduct = testData.productIds?.some(productId =>
 						conditions.productIds.includes(productId)
 					);
 					if (!hasMatchingProduct) {
@@ -274,7 +274,7 @@ const discountController = {
 
 				// Check collection IDs condition
 				if (!discountFailed && conditions.collectionIds && conditions.collectionIds.length > 0) {
-					const hasMatchingCollection = testData.collectionIds?.some(collectionId => 
+					const hasMatchingCollection = testData.collectionIds?.some(collectionId =>
 						conditions.collectionIds.includes(collectionId)
 					);
 					if (!hasMatchingCollection) {
@@ -285,13 +285,13 @@ const discountController = {
 
 				// Check customer segment condition
 				if (!discountFailed && conditions.customerSegments && conditions.customerSegments.length > 0) {
-					if (!testData.customerSegment || 
+					if (!testData.customerSegment ||
 						!conditions.customerSegments.includes(testData.customerSegment)) {
 						discountFailed = true;
 						failureReason = 'Customer segment not eligible';
 					}
 				}
-				
+
 				// Check BOGO-specific minimum buy quantity condition
 				if (!discountFailed && discount.type === 'buy_x_get_y') {
 					const buyQuantity = discount.bogoConfig?.buyQuantity || discount.value || 1;
@@ -301,7 +301,7 @@ const discountController = {
 						failureReason = `Buy ${buyQuantity} Get ${getQuantity}: Only ${testData.quantity} items in cart`;
 					}
 				}
-				
+
 				// If any condition failed, handle based on stopOnFirstFailure setting
 				if (discountFailed) {
 					if (discountStack.stopOnFirstFailure) {
@@ -326,12 +326,12 @@ const discountController = {
 						discountAmount = currentPrice * (discount.value / 100);
 						appliedDiscount.appliedAmount = discountAmount;
 						break;
-					
+
 					case 'fixed_amount':
 						discountAmount = Math.min(discount.value, currentPrice);
 						appliedDiscount.appliedAmount = discountAmount;
 						break;
-					
+
 					case 'free_shipping':
 						// Free shipping removes shipping cost
 						if (shippingCost > 0) {
@@ -342,13 +342,13 @@ const discountController = {
 							shippingCost = 0;
 						}
 						break;
-					
+
 					case 'buy_x_get_y':
 						// Enhanced BOGO calculation using bogoConfig
 						const buyQuantity = discount.bogoConfig?.buyQuantity || discount.value || 1;
 						const getQuantity = discount.bogoConfig?.getQuantity || 1;
 						const limitPerOrder = discount.bogoConfig?.limitPerOrder || null;
-						
+
 						console.log('Enhanced BOGO Debug:', {
 							quantity: testData.quantity,
 							buyQuantity: buyQuantity,
@@ -356,23 +356,19 @@ const discountController = {
 							limitPerOrder: limitPerOrder,
 							meetsCondition: testData.quantity >= buyQuantity
 						});
+
+						// Calculate how many complete buy sets exist
+						const completeBuySets = Math.floor(testData.quantity / buyQuantity);
 						
-						// Calculate how many complete "buy X get Y" sets we have
-						const completeSets = Math.floor(testData.quantity / (buyQuantity + getQuantity));
-						const freeItemsFromCompleteSets = completeSets * getQuantity;
-						
-						// Handle remainder: if we have extra items that don't form a complete set
-						// but still meet the minimum buy requirement
-						const remainderItems = testData.quantity % (buyQuantity + getQuantity);
-						const extraFreeItems = remainderItems >= buyQuantity ? Math.floor(remainderItems / buyQuantity) * getQuantity : 0;
-						
-						let totalFreeItems = freeItemsFromCompleteSets + extraFreeItems;
-						
+						// Calculate total free items (before any limits)
+						let totalFreeItems = completeBuySets * getQuantity;
+
 						// Apply per-order limit if specified
-						if (limitPerOrder && totalFreeItems > limitPerOrder) {
+						const limitApplied = limitPerOrder && totalFreeItems > limitPerOrder;
+						if (limitApplied) {
 							totalFreeItems = limitPerOrder;
 						}
-						
+
 						if (totalFreeItems > 0) {
 							const pricePerItem = testData.originalPrice / testData.quantity;
 							discountAmount = totalFreeItems * pricePerItem;
@@ -381,22 +377,22 @@ const discountController = {
 							appliedDiscount.bogoDetails = {
 								buyQuantity,
 								getQuantity,
-								completeSets,
-								remainderItems,
-								extraFreeItems,
-								limitApplied: limitPerOrder && (freeItemsFromCompleteSets + extraFreeItems) > limitPerOrder
+								completeBuySets,
+								totalFreeItemsBeforeLimit: completeBuySets * getQuantity,
+								limitApplied
 							};
-							
-							console.log('Enhanced BOGO Calculation:', {
-								completeSets,
-								freeItemsFromCompleteSets,
-								remainderItems,
-								extraFreeItems,
+
+							console.log('BOGO Calculation:', {
+								totalQuantity: testData.quantity,
+								buyQuantity,
+								getQuantity,
+								completeBuySets,
+								totalFreeItemsBeforeLimit: completeBuySets * getQuantity,
 								totalFreeItems,
 								pricePerItem,
 								discountAmount,
 								limitPerOrder,
-								limitApplied: appliedDiscount.bogoDetails.limitApplied
+								limitApplied
 							});
 						}
 						break;
@@ -419,7 +415,7 @@ const discountController = {
 			const productDiscountAmount = totalDiscountAmount;
 			const shippingDiscountAmount = freeShippingApplied ? originalShippingCost : 0;
 			const totalDiscountAmountCombined = productDiscountAmount + shippingDiscountAmount;
-			
+
 			console.log('Discount calculation:', {
 				productDiscountAmount,
 				shippingDiscountAmount,
@@ -448,8 +444,8 @@ const discountController = {
 				productDiscountAmount: productDiscountAmount,
 				shippingDiscountAmount: shippingDiscountAmount,
 				totalDiscountAmount: totalDiscountAmountCombined,
-				savingsPercentage: testData.originalPrice > 0 
-					? Math.round((totalDiscountAmountCombined / (testData.originalPrice + originalShippingCost)) * 100) 
+				savingsPercentage: testData.originalPrice > 0
+					? Math.round((totalDiscountAmountCombined / (testData.originalPrice + originalShippingCost)) * 100)
 					: 0,
 				stopOnFirstFailure: discountStack.stopOnFirstFailure
 			};
