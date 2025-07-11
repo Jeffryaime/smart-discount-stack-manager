@@ -66,6 +66,10 @@ const discountStackSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  stopOnFirstFailure: {
+    type: Boolean,
+    default: false
+  },
   startDate: {
     type: Date,
     default: Date.now

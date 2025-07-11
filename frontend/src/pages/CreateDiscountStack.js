@@ -24,6 +24,7 @@ function CreateDiscountStack() {
 		name: '',
 		description: '',
 		isActive: true,
+		stopOnFirstFailure: false,
 		discounts: [],
 		startDate: '',
 		endDate: '',
@@ -184,6 +185,22 @@ function CreateDiscountStack() {
 										helpText="Leave empty for unlimited usage"
 										autoComplete="off"
 										placeholder="e.g., 100"
+									/>
+								</FormLayout>
+							</VerticalStack>
+						</div>
+					</Card>
+
+					<Card>
+						<div style={{ padding: '24px' }}>
+							<VerticalStack gap="4">
+								<Text variant="headingMd">Advanced Settings</Text>
+								<FormLayout>
+									<Checkbox
+										label="Stop on First Failure"
+										checked={formData.stopOnFirstFailure}
+										onChange={(value) => handleFieldChange('stopOnFirstFailure', value)}
+										helpText="When enabled, if a higher priority discount cannot be applied, all lower priority discounts will be skipped. Default behavior applies each discount independently."
 									/>
 								</FormLayout>
 							</VerticalStack>

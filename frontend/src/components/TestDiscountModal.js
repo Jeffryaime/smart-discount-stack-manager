@@ -352,6 +352,51 @@ const TestDiscountModal = ({ open, onClose, discountStack, onTest }) => {
                         </Box>
                       ))}
                     </VerticalStack>
+                    
+                    {results.skippedDiscounts && results.skippedDiscounts.length > 0 && (
+                      <VerticalStack gap="3">
+                        <Text variant="headingMd" as="h4">Skipped Discounts</Text>
+                        {results.stopOnFirstFailure && (
+                          <Banner status="warning" tone="subdued">
+                            Stop on First Failure is enabled. Discount processing stopped after the first failed condition.
+                          </Banner>
+                        )}
+                        {results.skippedDiscounts.map((discount, index) => (
+                          <Box key={index} padding="200" background="bg-surface-critical-subdued" borderRadius="200">
+                            <VerticalStack gap="2">
+                              <HorizontalStack align="space-between" blockAlign="center">
+                                <HorizontalStack gap="2" blockAlign="center">
+                                  <Badge status="critical">
+                                    {discount.type.replace('_', ' ')}
+                                  </Badge>
+                                  <Text variant="bodyMd" fontWeight="semibold">
+                                    {discount.type === 'percentage' 
+                                      ? `${discount.value}% off`
+                                      : discount.type === 'fixed_amount'
+                                      ? `$${discount.value} off`
+                                      : discount.type === 'free_shipping'
+                                      ? 'Free Shipping'
+                                      : discount.type === 'buy_x_get_y'
+                                      ? `Buy ${discount.bogoConfig?.buyQuantity || discount.value} Get ${discount.bogoConfig?.getQuantity || 1}`
+                                      : `${discount.value} discount`
+                                    }
+                                  </Text>
+                                </HorizontalStack>
+                                <Badge status="critical" size="small">Skipped</Badge>
+                              </HorizontalStack>
+                              <Text variant="bodySm" color="critical">
+                                Reason: {discount.skippedReason}
+                              </Text>
+                              {discount.priority !== undefined && (
+                                <Text variant="bodySm" color="subdued">
+                                  Priority: {discount.priority}
+                                </Text>
+                              )}
+                            </VerticalStack>
+                          </Box>
+                        ))}
+                      </VerticalStack>
+                    )}
                   </>
                 )}
                 

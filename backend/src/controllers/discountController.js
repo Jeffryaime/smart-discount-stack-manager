@@ -213,11 +213,13 @@ const discountController = {
 			
 			// Calculate discounts
 			const appliedDiscounts = [];
+			const skippedDiscounts = [];
 			let currentPrice = testData.originalPrice;
 			let shippingCost = testData.shippingCost || 0;
 			let originalShippingCost = shippingCost;
 			let freeShippingApplied = false;
 			let totalDiscountAmount = 0;
+			let stopProcessing = false;
 
 			// Sort discounts by priority (lower numbers have higher priority)
 			const sortedDiscounts = [...discountStack.discounts]
@@ -225,6 +227,14 @@ const discountController = {
 				.sort((a, b) => (a.priority || 0) - (b.priority || 0));
 
 			for (const discount of sortedDiscounts) {
+				// Check if we should stop processing due to previous failure
+				if (stopProcessing) {
+					skippedDiscounts.push({
+						...discount.toObject(),
+						skippedReason: 'Previous discount in chain failed to apply'
+					});
+					continue;
+				}
 				const conditions = discount.conditions || {};
 				console.log('Checking discount:', {
 					type: discount.type,
@@ -234,39 +244,64 @@ const discountController = {
 					testAmount: testData.originalPrice
 				});
 				
+				// Track if this discount failed to apply
+				let discountFailed = false;
+				let failureReason = '';
+				
 				// Check minimum amount condition
 				if (conditions.minimumAmount && testData.originalPrice < conditions.minimumAmount) {
-					continue;
+					discountFailed = true;
+					failureReason = `Minimum amount not met: $${conditions.minimumAmount} required`;
 				}
 
 				// Check minimum quantity condition
-				if (conditions.minimumQuantity && testData.quantity < conditions.minimumQuantity) {
+				if (!discountFailed && conditions.minimumQuantity && testData.quantity < conditions.minimumQuantity) {
 					console.log(`Skipping discount due to quantity check: ${testData.quantity} < ${conditions.minimumQuantity}`);
-					continue;
+					discountFailed = true;
+					failureReason = `Minimum quantity not met: ${conditions.minimumQuantity} required`;
 				}
 
 				// Check product IDs condition
-				if (conditions.productIds && conditions.productIds.length > 0) {
+				if (!discountFailed && conditions.productIds && conditions.productIds.length > 0) {
 					const hasMatchingProduct = testData.productIds?.some(productId => 
 						conditions.productIds.includes(productId)
 					);
-					if (!hasMatchingProduct) continue;
+					if (!hasMatchingProduct) {
+						discountFailed = true;
+						failureReason = 'No matching products in cart';
+					}
 				}
 
 				// Check collection IDs condition
-				if (conditions.collectionIds && conditions.collectionIds.length > 0) {
+				if (!discountFailed && conditions.collectionIds && conditions.collectionIds.length > 0) {
 					const hasMatchingCollection = testData.collectionIds?.some(collectionId => 
 						conditions.collectionIds.includes(collectionId)
 					);
-					if (!hasMatchingCollection) continue;
+					if (!hasMatchingCollection) {
+						discountFailed = true;
+						failureReason = 'No matching collections in cart';
+					}
 				}
 
 				// Check customer segment condition
-				if (conditions.customerSegments && conditions.customerSegments.length > 0) {
+				if (!discountFailed && conditions.customerSegments && conditions.customerSegments.length > 0) {
 					if (!testData.customerSegment || 
 						!conditions.customerSegments.includes(testData.customerSegment)) {
-						continue;
+						discountFailed = true;
+						failureReason = 'Customer segment not eligible';
 					}
+				}
+				
+				// If any condition failed, handle based on stopOnFirstFailure setting
+				if (discountFailed) {
+					if (discountStack.stopOnFirstFailure) {
+						stopProcessing = true;
+						skippedDiscounts.push({
+							...discount.toObject(),
+							skippedReason: failureReason
+						});
+					}
+					continue;
 				}
 
 				// Apply discount based on type
@@ -312,7 +347,17 @@ const discountController = {
 							meetsCondition: testData.quantity >= buyQuantity
 						});
 						
-						if (testData.quantity >= buyQuantity) {
+						if (testData.quantity < buyQuantity) {
+							// BOGO doesn't meet minimum buy requirement
+							if (discountStack.stopOnFirstFailure) {
+								stopProcessing = true;
+								skippedDiscounts.push({
+									...discount.toObject(),
+									skippedReason: `Buy ${buyQuantity} Get ${getQuantity}: Only ${testData.quantity} items in cart`
+								});
+								continue;
+							}
+						} else {
 							// Calculate how many complete "buy X get Y" sets we have
 							const completeSets = Math.floor(testData.quantity / (buyQuantity + getQuantity));
 							const freeItemsFromCompleteSets = completeSets * getQuantity;
@@ -401,12 +446,14 @@ const discountController = {
 				subtotal: currentPrice + shippingCost,
 				finalTotal: finalTotalWithTax,
 				appliedDiscounts: appliedDiscounts,
+				skippedDiscounts: skippedDiscounts,
 				productDiscountAmount: productDiscountAmount,
 				shippingDiscountAmount: shippingDiscountAmount,
 				totalDiscountAmount: totalDiscountAmountCombined,
 				savingsPercentage: testData.originalPrice > 0 
 					? Math.round((totalDiscountAmountCombined / (testData.originalPrice + originalShippingCost)) * 100) 
-					: 0
+					: 0,
+				stopOnFirstFailure: discountStack.stopOnFirstFailure
 			};
 
 			res.json(result);
