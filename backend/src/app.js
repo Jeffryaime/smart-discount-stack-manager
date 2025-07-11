@@ -13,7 +13,18 @@ const PORT = process.env.PORT || 3001;
 app.set('trust proxy', true);
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+	contentSecurityPolicy: {
+		directives: {
+			defaultSrc: ["'self'"],
+			scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "http://localhost:3003"],
+			styleSrc: ["'self'", "'unsafe-inline'"],
+			fontSrc: ["'self'", "data:"],
+			imgSrc: ["'self'", "data:", "https:"],
+			connectSrc: ["'self'", "http://localhost:3003", "https://*.ngrok-free.app"],
+		},
+	},
+}));
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
