@@ -24,7 +24,7 @@ import {
 	useBulkDeleteDiscountStacks,
 	useBulkUpdateDiscountStacks,
 } from '../hooks/useDiscountStacks';
-import TestDiscountModal from '../components/TestDiscountModal';
+import UnifiedTestDiscountModal from '../components/UnifiedTestDiscountModal';
 import { discountStacksApi } from '../services/api';
 import { navigateWithShop } from '../utils/navigation';
 
@@ -522,7 +522,7 @@ function DiscountStacks() {
 			</Modal>
 
 			{stackToTest && (
-				<TestDiscountModal
+				<UnifiedTestDiscountModal
 					open={testModalOpen}
 					onClose={() => {
 						setTestModalOpen(false);

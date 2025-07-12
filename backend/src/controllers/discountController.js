@@ -262,12 +262,23 @@ const discountController = {
 			}
 
 			// Log the received test data for debugging
-			console.log('Received testData:', testData);
+			console.log('🎯 Received testData:', JSON.stringify(testData, null, 2));
+			console.log('🏪 Discount Stack:', discountStack.name);
+			console.log('💰 Discounts in stack:', discountStack.discounts.map(d => ({
+				type: d.type,
+				active: d.isActive,
+				conditions: d.conditions,
+				bogoConfig: d.bogoConfig
+			})));
 
 			// Calculate discounts
 			const appliedDiscounts = [];
 			const skippedDiscounts = [];
-			let currentPrice = testData.originalPrice;
+			// Handle both legacy and new payload formats
+			const isNewFormat = testData.eligibleSubtotal !== undefined;
+			const eligibleSubtotal = isNewFormat ? (testData.eligibleSubtotal || 0) : testData.originalPrice;
+			const ineligibleSubtotal = isNewFormat ? (testData.ineligibleSubtotal || 0) : 0;
+			let currentPrice = eligibleSubtotal; // Only apply discounts to eligible items
 			let shippingCost = testData.shippingCost || 0;
 			let originalShippingCost = shippingCost;
 			let freeShippingApplied = false;
@@ -301,8 +312,9 @@ const discountController = {
 				let discountFailed = false;
 				let failureReason = '';
 
-				// Check minimum amount condition
-				if (conditions.minimumAmount && testData.originalPrice < conditions.minimumAmount) {
+				// Check minimum amount condition (against eligible items only for new format)
+				const amountToCheck = isNewFormat ? eligibleSubtotal : testData.originalPrice;
+				if (conditions.minimumAmount && amountToCheck < conditions.minimumAmount) {
 					discountFailed = true;
 					failureReason = `Minimum amount not met: $${conditions.minimumAmount} required`;
 				}
@@ -355,14 +367,15 @@ const discountController = {
 					}
 				}
 
-				// If any condition failed, handle based on stopOnFirstFailure setting
+				// If any condition failed, track the skipped discount and handle based on stopOnFirstFailure setting
 				if (discountFailed) {
+					skippedDiscounts.push({
+						...discount.toObject(),
+						skippedReason: failureReason
+					});
+					
 					if (discountStack.stopOnFirstFailure) {
 						stopProcessing = true;
-						skippedDiscounts.push({
-							...discount.toObject(),
-							skippedReason: failureReason
-						});
 					}
 					continue;
 				}
@@ -447,6 +460,7 @@ const discountController = {
 								appliedDiscount.freeItems = bogoResult.freeItems;
 								appliedDiscount.calculationDetails = bogoResult.calculationDetails;
 								appliedDiscount.bogoMode = freeProductMode;
+								appliedDiscount.bogoConfig = bogoConfig; // Pass through the config for display
 
 								console.log('Enhanced BOGO Calculation:', bogoResult);
 							}
@@ -464,6 +478,7 @@ const discountController = {
 								appliedDiscount.freeItems = legacyResult.freeItems;
 								appliedDiscount.bogoDetails = legacyResult.bogoDetails;
 								appliedDiscount.bogoMode = 'legacy';
+								appliedDiscount.bogoConfig = bogoConfig; // Pass through the config for display
 
 								console.log('Legacy BOGO Calculation:', legacyResult);
 							}
@@ -497,30 +512,38 @@ const discountController = {
 				originalShippingCost
 			});
 
-			// Calculate taxes (applied to final price + shipping, after discounts)
-			const taxableAmount = currentPrice + shippingCost;
+			// Calculate final totals including ineligible items
+			const finalEligiblePrice = currentPrice; // Eligible items after discounts
+			const totalItemsPrice = finalEligiblePrice + ineligibleSubtotal; // All items combined
+			
+			// Calculate taxes (applied to all items + shipping, after discounts)
+			const taxableAmount = totalItemsPrice + shippingCost;
 			const taxAmount = taxableAmount * (testData.taxRate || 0);
 			const finalTotalWithTax = taxableAmount + taxAmount;
 
 			const result = {
-				originalPrice: testData.originalPrice,
-				finalPrice: currentPrice,
+				originalPrice: isNewFormat ? (eligibleSubtotal + ineligibleSubtotal) : testData.originalPrice,
+				finalPrice: totalItemsPrice, // All items after discounts
+				eligibleSubtotal: eligibleSubtotal, // Original eligible items amount
+				ineligibleSubtotal: ineligibleSubtotal, // Ineligible items amount (unchanged)
+				finalEligiblePrice: finalEligiblePrice, // Eligible items after discounts
 				shippingCost: shippingCost,
 				originalShippingCost: originalShippingCost,
 				freeShippingApplied: freeShippingApplied,
 				taxRate: testData.taxRate || 0,
 				taxAmount: taxAmount,
-				subtotal: currentPrice + shippingCost,
+				subtotal: totalItemsPrice + shippingCost,
 				finalTotal: finalTotalWithTax,
 				appliedDiscounts: appliedDiscounts,
 				skippedDiscounts: skippedDiscounts,
 				productDiscountAmount: productDiscountAmount,
 				shippingDiscountAmount: shippingDiscountAmount,
 				totalDiscountAmount: totalDiscountAmountCombined,
-				savingsPercentage: testData.originalPrice > 0
-					? Math.round((totalDiscountAmountCombined / (testData.originalPrice + originalShippingCost)) * 100)
+				savingsPercentage: (eligibleSubtotal + ineligibleSubtotal + originalShippingCost) > 0
+					? Math.round((totalDiscountAmountCombined / (eligibleSubtotal + ineligibleSubtotal + originalShippingCost)) * 100)
 					: 0,
-				stopOnFirstFailure: discountStack.stopOnFirstFailure
+				stopOnFirstFailure: discountStack.stopOnFirstFailure,
+				isNewFormat: isNewFormat // For debugging
 			};
 
 			res.json(result);
@@ -629,7 +652,7 @@ const discountController = {
 			// Use real Shopify API for all requests now that we have proper sessions
 			const client = new shopify.clients.Graphql({ session: req.session });
 
-			// Get all products using GraphQL with enhanced metadata
+			// Get all products using GraphQL with enhanced metadata including collections
 			const allProductsQuery = `
 				query getAllProducts($first: Int!) {
 					products(first: $first, sortKey: TITLE) {
@@ -659,6 +682,16 @@ const discountController = {
 								}
 								totalInventory
 								tracksInventory
+								collections(first: 10) {
+									edges {
+										node {
+											id
+											legacyResourceId
+											title
+											handle
+										}
+									}
+								}
 							}
 						}
 						pageInfo {
@@ -693,7 +726,13 @@ const discountController = {
 				currency: edge.node.priceRangeV2.minVariantPrice.currencyCode,
 				status: edge.node.status,
 				inventory: edge.node.totalInventory || 0,
-				tracksInventory: edge.node.tracksInventory
+				tracksInventory: edge.node.tracksInventory,
+				collections: edge.node.collections.edges.map(collectionEdge => ({
+					id: collectionEdge.node.legacyResourceId,
+					gid: collectionEdge.node.id,
+					title: collectionEdge.node.title,
+					handle: collectionEdge.node.handle
+				}))
 			}));
 
 			const hasNextPage = response.body.data.products.pageInfo.hasNextPage;

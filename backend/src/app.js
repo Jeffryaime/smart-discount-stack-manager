@@ -81,8 +81,11 @@ connectDB().catch((error) => {
 	process.exit(1);
 });
 
-app.listen(PORT, () => {
-	console.log(`Server running on port ${PORT}`);
-});
+// Only start server if this file is executed directly (not imported for testing)
+if (require.main === module) {
+	app.listen(PORT, () => {
+		console.log(`Server running on port ${PORT}`);
+	});
+}
 
 module.exports = app;

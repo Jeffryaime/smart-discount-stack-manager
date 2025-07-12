@@ -8,15 +8,25 @@
  * @param {string} path - The path to navigate to
  */
 export const navigateWithShop = (navigate, path) => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const shop = urlParams.get('shop');
-  
-  if (shop) {
-    const separator = path.includes('?') ? '&' : '?';
-    navigate(`${path}${separator}shop=${shop}`);
-  } else {
-    navigate(path);
-  }
+	// Validate navigate parameter
+	if (typeof navigate !== 'function') {
+		throw new Error('navigateWithShop: navigate parameter must be a function');
+	}
+
+	// Validate path parameter
+	if (typeof path !== 'string') {
+		throw new Error('navigateWithShop: path parameter must be a string');
+	}
+
+	const urlParams = new URLSearchParams(window.location.search);
+	const shop = urlParams.get('shop');
+
+	if (shop) {
+		const separator = path.includes('?') ? '&' : '?';
+		navigate(`${path}${separator}shop=${shop}`);
+	} else {
+		navigate(path);
+	}
 };
 
 /**
@@ -24,8 +34,8 @@ export const navigateWithShop = (navigate, path) => {
  * @returns {string|null} The shop parameter or null if not present
  */
 export const getCurrentShop = () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get('shop');
+	const urlParams = new URLSearchParams(window.location.search);
+	return urlParams.get('shop');
 };
 
 /**
@@ -34,10 +44,10 @@ export const getCurrentShop = () => {
  * @returns {string} The path with shop parameter if available
  */
 export const buildUrlWithShop = (path) => {
-  const shop = getCurrentShop();
-  if (shop) {
-    const separator = path.includes('?') ? '&' : '?';
-    return `${path}${separator}shop=${shop}`;
-  }
-  return path;
+	const shop = getCurrentShop();
+	if (shop) {
+		const separator = path.includes('?') ? '&' : '?';
+		return `${path}${separator}shop=${shop}`;
+	}
+	return path;
 };

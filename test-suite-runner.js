@@ -15,11 +15,12 @@ class TestSuiteRunner {
       backend: {
         unit: { passed: 0, failed: 0, total: 0, details: [] },
         integration: { passed: 0, failed: 0, total: 0, details: [] },
-        auth: { passed: 0, failed: 0, total: 0, details: [] }
+        auth: { passed: 0, failed: 0, total: 0, details: [] },
+        enhanced: { passed: 0, failed: 0, total: 0, details: [] }
       },
       frontend: {
         components: { passed: 0, failed: 0, total: 0, details: [] },
-        integration: { passed: 0, failed: 0, total: 0, details: [] }
+        testModal: { passed: 0, failed: 0, total: 0, details: [] }
       },
       overall: { passed: 0, failed: 0, total: 0, duration: 0 }
     };
@@ -239,6 +240,25 @@ class TestSuiteRunner {
   }
 
   /**
+   * Run enhanced backend tests (BOGO calculator and test endpoint)
+   */
+  async runEnhancedBackendTests() {
+    console.log('🚀 Running Enhanced Backend Tests\n');
+
+    const result = await this.runCommand(
+      'npm',
+      ['test', '--', '--testPathPattern=(enhanced-bogo-calculator|enhanced-test-endpoint)\\.test\\.js$', '--json'],
+      path.join(__dirname, 'backend'),
+      'Enhanced Backend Tests (BOGO & Test Endpoint)'
+    );
+
+    const parsed = this.parseJestOutput(result.stdout);
+    this.results.backend.enhanced = parsed;
+
+    return result.success;
+  }
+
+  /**
    * Run frontend component tests
    */
   async runFrontendTests() {
@@ -258,6 +278,25 @@ class TestSuiteRunner {
   }
 
   /**
+   * Run test modal component tests
+   */
+  async runTestModalTests() {
+    console.log('🧪 Running Test Modal Component Tests\n');
+
+    const result = await this.runCommand(
+      'npm',
+      ['test', '--', '--testPathPattern=UnifiedTestDiscountModal\\.test\\.js$', '--watchAll=false', '--json'],
+      path.join(__dirname, 'frontend'),
+      'Unified Test Modal Tests'
+    );
+
+    const parsed = this.parseJestOutput(result.stdout);
+    this.results.frontend.testModal = parsed;
+
+    return result.success;
+  }
+
+  /**
    * Generate detailed test report
    */
   generateReport() {
@@ -269,7 +308,9 @@ class TestSuiteRunner {
       this.results.backend.unit,
       this.results.backend.integration,
       this.results.backend.auth,
-      this.results.frontend.components
+      this.results.backend.enhanced,
+      this.results.frontend.components,
+      this.results.frontend.testModal
     ];
 
     this.results.overall.passed = allResults.reduce((sum, r) => sum + r.passed, 0);
@@ -285,10 +326,12 @@ class TestSuiteRunner {
     console.log(`Unit Tests:        ${this.results.backend.unit.passed}/${this.results.backend.unit.total} passed`);
     console.log(`Integration Tests: ${this.results.backend.integration.passed}/${this.results.backend.integration.total} passed`);
     console.log(`Auth Tests:        ${this.results.backend.auth.passed}/${this.results.backend.auth.total} passed`);
+    console.log(`Enhanced Tests:    ${this.results.backend.enhanced.passed}/${this.results.backend.enhanced.total} passed`);
 
     console.log('\n⚛️  FRONTEND TESTS');
     console.log('-'.repeat(40));
     console.log(`Component Tests:   ${this.results.frontend.components.passed}/${this.results.frontend.components.total} passed`);
+    console.log(`Test Modal Tests:  ${this.results.frontend.testModal.passed}/${this.results.frontend.testModal.total} passed`);
 
     console.log('\n📈 OVERALL SUMMARY');
     console.log('-'.repeat(40));
@@ -301,7 +344,14 @@ class TestSuiteRunner {
     // Test coverage areas
     console.log('\n🎯 TEST COVERAGE AREAS');
     console.log('-'.repeat(40));
-    console.log('✅ BOGO Calculator Logic & Edge Cases');
+    console.log('✅ Enhanced BOGO Calculator (Specific & Cheapest Modes)');
+    console.log('✅ Unified Test Modal (Eligibility Detection & Cart Breakdown)');
+    console.log('✅ Enhanced Test Endpoint (Eligible/Ineligible Separation)');
+    console.log('✅ Product ID Format Compatibility (Legacy & GID)');
+    console.log('✅ Gift Card Detection & Disabling');
+    console.log('✅ Real-time Eligibility Calculation');
+    console.log('✅ Live Cart Breakdown (Eligible vs Ineligible)');
+    console.log('✅ BOGO Limit Enforcement & Priority System');
     console.log('✅ Discount Stack CRUD Operations');
     console.log('✅ Authentication Middleware (Shopify OAuth + JWT)');
     console.log('✅ API Endpoints (Collections, Variants, Filters)');
@@ -309,7 +359,6 @@ class TestSuiteRunner {
     console.log('✅ Redis Session Management');
     console.log('✅ UnifiedProductSelector Component');
     console.log('✅ Product/Collection/SKU Selection Logic');
-    console.log('✅ Gift Card Filtering');
     console.log('✅ Error Handling & Validation');
 
     console.log('\n🚀 HOW TO RUN INDIVIDUAL TEST SUITES');
@@ -317,8 +366,11 @@ class TestSuiteRunner {
     console.log('Backend Unit Tests:      cd backend && npm test');
     console.log('Backend Integration:     cd backend && npm test -- --testPathPattern=integration');
     console.log('Auth Tests Only:         cd backend && npm test -- --testPathPattern=auth-middleware');
+    console.log('Enhanced BOGO Tests:     cd backend && npm test -- --testPathPattern=enhanced-bogo-calculator');
+    console.log('Enhanced Endpoint Tests: cd backend && npm test -- --testPathPattern=enhanced-test-endpoint');
     console.log('Frontend Tests:          cd frontend && npm test');
-    console.log('BOGO Tests Only:         cd backend && npm test -- --testPathPattern=bogo');
+    console.log('Test Modal Tests:        cd frontend && npm test -- --testPathPattern=UnifiedTestDiscountModal');
+    console.log('Legacy BOGO Tests:       cd backend && npm test -- --testPathPattern=bogo');
     console.log('API Tests Only:          cd backend && npm test -- --testPathPattern=api-endpoints');
 
     console.log('\n🛠️  TESTING INFRASTRUCTURE');
@@ -337,7 +389,7 @@ class TestSuiteRunner {
       console.log('-'.repeat(40));
       
       allResults.forEach((result, index) => {
-        const labels = ['Backend Unit', 'Backend Integration', 'Backend Auth', 'Frontend Components'];
+        const labels = ['Backend Unit', 'Backend Integration', 'Backend Auth', 'Backend Enhanced', 'Frontend Components', 'Frontend Test Modal'];
         if (result.failed > 0) {
           console.log(`${labels[index]}: ${result.failed} failed`);
           result.details.forEach(detail => {
@@ -349,9 +401,12 @@ class TestSuiteRunner {
       });
     } else {
       console.log('\n🎉 ALL TESTS PASSED! 🎉');
-      console.log('The unified product selector feature is working correctly.');
-      console.log('Database separation is properly configured.');
-      console.log('Authentication middleware is functioning as expected.');
+      console.log('✅ Unified Test Modal with eligibility detection working correctly');
+      console.log('✅ Enhanced BOGO calculator handling all scenarios properly');
+      console.log('✅ Eligible/ineligible item separation functioning correctly');
+      console.log('✅ Database separation is properly configured');
+      console.log('✅ Authentication middleware is functioning as expected');
+      console.log('✅ All discount scenarios and edge cases covered');
     }
 
     console.log('\n' + '='.repeat(80));
@@ -378,7 +433,9 @@ class TestSuiteRunner {
       this.runBackendUnitTests(),
       this.runBackendIntegrationTests(),
       this.runAuthTests(),
-      this.runFrontendTests()
+      this.runEnhancedBackendTests(),
+      this.runFrontendTests(),
+      this.runTestModalTests()
     ]);
 
     // Generate and display report

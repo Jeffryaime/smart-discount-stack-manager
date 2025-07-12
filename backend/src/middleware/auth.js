@@ -10,9 +10,20 @@ const verifyShopifyAuth = async (req, res, next) => {
 			return res.status(400).json({ error: 'Shop parameter is required' });
 		}
 
-		// Skip authentication in development mode for testing (only for test shop, not real store)
+		// Only log debug information in non-production environments
+		if (process.env.NODE_ENV !== 'production') {
+			console.log('Auth middleware debug:', {
+				NODE_ENV: process.env.NODE_ENV,
+				DISABLE_AUTH_BYPASS: process.env.DISABLE_AUTH_BYPASS,
+				shop: shop,
+				shopMatches: shop === 'test-shop.myshopify.com',
+			});
+		}
+
+		// Skip authentication in development/test mode for testing (only for test shop, not real store)
 		if (
-			process.env.NODE_ENV === 'development' &&
+			(process.env.NODE_ENV === 'development' ||
+				process.env.NODE_ENV === 'test') &&
 			shop === 'test-shop.myshopify.com' &&
 			!process.env.DISABLE_AUTH_BYPASS
 		) {
@@ -29,7 +40,7 @@ const verifyShopifyAuth = async (req, res, next) => {
 		try {
 			const sessionKey = `shopify_session_${shop}`;
 			const sessionData = await redisClient.get(sessionKey);
-			
+
 			if (sessionData) {
 				try {
 					req.session = JSON.parse(sessionData);
@@ -39,10 +50,10 @@ const verifyShopifyAuth = async (req, res, next) => {
 						shop: shop,
 						sessionKey: sessionKey,
 						error: parseError.message,
-						rawData: sessionData?.substring(0, 100) + '...' // Log first 100 chars for debugging
+						rawData: sessionData?.substring(0, 100) + '...', // Log first 100 chars for debugging
 					});
 					// Clear corrupted session data
-					await redisClient.del(sessionKey).catch(delError => {
+					await redisClient.del(sessionKey).catch((delError) => {
 						console.error('Failed to delete corrupted session:', delError);
 					});
 				}
@@ -52,9 +63,9 @@ const verifyShopifyAuth = async (req, res, next) => {
 		}
 
 		// If no session found, require re-authentication
-		return res.status(401).json({ 
-			error: 'No valid session found', 
-			redirectUrl: `/api/auth/install?shop=${shop}` 
+		return res.status(401).json({
+			error: 'No valid session found',
+			redirectUrl: `/api/auth/install?shop=${shop}`,
 		});
 	} catch (error) {
 		console.error('Auth middleware error:', error);
