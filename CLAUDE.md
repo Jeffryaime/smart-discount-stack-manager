@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Model Usage Instructions
+
+- **Use Sonnet 4 for execution**: When executing tasks, implementing code, or performing any hands-on work
+- **Use Opus for planning and thinking**: When analyzing, strategizing, or designing solutions
+
 ## Project Overview
 
 Smart Discount Stack Manager is a full-stack Shopify app that enables merchants to create and manage complex discount combinations with multiple rules and conditions.

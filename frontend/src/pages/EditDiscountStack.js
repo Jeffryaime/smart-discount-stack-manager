@@ -21,6 +21,7 @@ import {
 } from '../hooks/useDiscountStacks';
 import DiscountRuleForm from '../components/DiscountRuleForm';
 import { navigateWithShop } from '../utils/navigation';
+import AppLayout from '../components/AppLayout';
 
 // Helper function to safely parse date strings
 const parseDateString = (dateString) => {
@@ -212,19 +213,22 @@ function EditDiscountStack() {
 
 	if (isLoading) {
 		return (
-			<SkeletonPage primaryAction title="Edit Discount Stack">
+			<AppLayout>
+				<SkeletonPage primaryAction title="Edit Discount Stack">
 				<Card>
 					<div style={{ padding: '20px' }}>
 						<SkeletonBodyText />
 					</div>
 				</Card>
-			</SkeletonPage>
+				</SkeletonPage>
+			</AppLayout>
 		);
 	}
 
 	if (error) {
 		return (
-			<Page
+			<AppLayout>
+				<Page
 				title="Edit Discount Stack"
 				breadcrumbs={[{ content: 'Discount Stacks', url: '/discount-stacks' }]}
 			>
@@ -236,12 +240,14 @@ function EditDiscountStack() {
 						Back to Discount Stacks
 					</Button>
 				</HorizontalStack>
-			</Page>
+				</Page>
+			</AppLayout>
 		);
 	}
 
 	return (
-		<Page
+		<AppLayout>
+			<Page
 			title="Edit Discount Stack"
 			breadcrumbs={[{ content: 'Discount Stacks', url: '/discount-stacks' }]}
 		>
@@ -367,7 +373,8 @@ function EditDiscountStack() {
 					</div>
 				</VerticalStack>
 			</Form>
-		</Page>
+			</Page>
+		</AppLayout>
 	);
 }
 

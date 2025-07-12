@@ -5,7 +5,7 @@
 	"main": "backend/src/app.js",
 	"scripts": {
 		"dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
-		"dev:ngrok": "concurrently \"ngrok http 3001\" \"npm run backend:dev\" \"npm run frontend:dev\"",
+		"dev:ngrok": "concurrently \"ngrok http 3000\" \"npm run backend:dev\" \"npm run frontend:dev\"",
 		"backend:dev": "cd backend && npm run dev",
 		"frontend:dev": "cd frontend && cross-env PORT=3003 npm start",
 		"backend:install": "cd backend && npm install",

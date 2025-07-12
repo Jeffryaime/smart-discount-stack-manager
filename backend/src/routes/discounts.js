@@ -13,7 +13,11 @@ router.post('/', verifyShopifyAuth, discountController.createDiscountStack);
 router.get('/products', verifyShopifyAuth, discountController.getAllProducts);
 
 // Get all collections - Must be before /:id route
-router.get('/collections', verifyShopifyAuth, discountController.getAllCollections);
+router.get(
+	'/collections',
+	verifyShopifyAuth,
+	discountController.getAllCollections
+);
 
 // Get all variants/SKUs - Must be before /:id route
 router.get('/variants', verifyShopifyAuth, discountController.getAllVariants);
@@ -22,13 +26,25 @@ router.get('/variants', verifyShopifyAuth, discountController.getAllVariants);
 router.get('/filters', verifyShopifyAuth, discountController.getFilterMetadata);
 
 // Search products (for product selector) - Must be before /:id route
-router.get('/search/products', verifyShopifyAuth, discountController.searchProducts);
+router.get(
+	'/search/products',
+	verifyShopifyAuth,
+	discountController.searchProducts
+);
 
 // Search collections - Must be before /:id route
-router.get('/search/collections', verifyShopifyAuth, discountController.searchCollections);
+router.get(
+	'/search/collections',
+	verifyShopifyAuth,
+	discountController.searchCollections
+);
 
 // Search variants/SKUs - Must be before /:id route
-router.get('/search/variants', verifyShopifyAuth, discountController.searchVariants);
+router.get(
+	'/search/variants',
+	verifyShopifyAuth,
+	discountController.searchVariants
+);
 
 // Get specific discount stack
 router.get('/:id', verifyShopifyAuth, discountController.getDiscountStack);
@@ -37,9 +53,17 @@ router.get('/:id', verifyShopifyAuth, discountController.getDiscountStack);
 router.put('/:id', verifyShopifyAuth, discountController.updateDiscountStack);
 
 // Delete discount stack
-router.delete('/:id', verifyShopifyAuth, discountController.deleteDiscountStack);
+router.delete(
+	'/:id',
+	verifyShopifyAuth,
+	discountController.deleteDiscountStack
+);
 
 // Test discount stack
-router.post('/:id/test', verifyShopifyAuth, discountController.testDiscountStack);
+router.post(
+	'/:id/test',
+	verifyShopifyAuth,
+	discountController.testDiscountStack
+);
 
 module.exports = router;

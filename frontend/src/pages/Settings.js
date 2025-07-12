@@ -13,6 +13,7 @@ import {
 	Text,
 } from '@shopify/polaris';
 import apiClient from '../services/api';
+import AppLayout from '../components/AppLayout';
 
 function Settings() {
 	const [settings, setSettings] = useState({
@@ -184,7 +185,8 @@ function Settings() {
 	];
 
 	return (
-		<Page title="Settings" breadcrumbs={[{ content: 'Dashboard', url: '/' }]}>
+		<AppLayout>
+			<Page title="Settings" breadcrumbs={[{ content: 'Dashboard', url: '/' }]}>
 			{saved && (
 				<Banner status="success" onDismiss={() => setSaved(false)}>
 					<p>Settings saved successfully</p>
@@ -322,7 +324,8 @@ function Settings() {
 					{isSaving ? 'Saving...' : 'Save Settings'}
 				</Button>
 			</HorizontalStack>
-		</Page>
+			</Page>
+		</AppLayout>
 	);
 }
 

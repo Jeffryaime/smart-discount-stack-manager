@@ -2,6 +2,7 @@ const DiscountStack = require('../models/DiscountStack');
 const { shopify } = require('../config/shopify');
 const { validateDiscountStackData } = require('../utils/validation');
 const BOGOCalculator = require('../utils/bogoCalculator');
+const ActivityService = require('../services/activityService');
 
 // Helper function to validate limit parameter
 const validateLimit = (limitParam) => {
@@ -126,6 +127,10 @@ const discountController = {
 			const discountStack = new DiscountStack(discountData);
 
 			const savedStack = await discountStack.save();
+			
+			// Log activity
+			await ActivityService.logStackCreated(shop, savedStack);
+			
 			res.status(201).json(savedStack);
 		} catch (error) {
 			console.error('Error creating discount stack:', error);
@@ -203,6 +208,17 @@ const discountController = {
 				return res.status(404).json({ error: 'Discount stack not found' });
 			}
 
+			// Log activity based on update type
+			if (isStatusUpdate && 'isActive' in req.body) {
+				if (req.body.isActive) {
+					await ActivityService.logStackActivated(shop, discountStack);
+				} else {
+					await ActivityService.logStackDeactivated(shop, discountStack);
+				}
+			} else {
+				await ActivityService.logStackUpdated(shop, discountStack);
+			}
+
 			res.json(discountStack);
 		} catch (error) {
 			console.error('Error updating discount stack:', error);
@@ -228,6 +244,9 @@ const discountController = {
 			if (!discountStack) {
 				return res.status(404).json({ error: 'Discount stack not found' });
 			}
+
+			// Log activity
+			await ActivityService.logStackDeleted(shop, discountStack.name, discountStack._id);
 
 			res.json({ message: 'Discount stack deleted successfully' });
 		} catch (error) {

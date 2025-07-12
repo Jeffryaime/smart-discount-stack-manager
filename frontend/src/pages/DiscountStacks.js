@@ -27,6 +27,7 @@ import {
 import UnifiedTestDiscountModal from '../components/UnifiedTestDiscountModal';
 import { discountStacksApi } from '../services/api';
 import { navigateWithShop } from '../utils/navigation';
+import AppLayout from '../components/AppLayout';
 
 function DiscountStacks() {
 	const navigate = useNavigate();
@@ -234,7 +235,8 @@ function DiscountStacks() {
 	]);
 
 	return (
-		<Page
+		<AppLayout>
+			<Page
 			title={
 				<div
 					onClick={() => navigateWithShop(navigate, '/')}
@@ -532,7 +534,8 @@ function DiscountStacks() {
 					onTest={handleTestDiscount}
 				/>
 			)}
-		</Page>
+			</Page>
+		</AppLayout>
 	);
 }
 

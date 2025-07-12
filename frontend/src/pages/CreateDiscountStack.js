@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCreateDiscountStack } from '../hooks/useDiscountStacks';
 import DiscountRuleForm from '../components/DiscountRuleForm';
 import { navigateWithShop } from '../utils/navigation';
+import AppLayout from '../components/AppLayout';
 
 function CreateDiscountStack() {
 	const navigate = useNavigate();
@@ -97,7 +98,8 @@ function CreateDiscountStack() {
 	};
 
 	return (
-		<Page
+		<AppLayout>
+			<Page
 			title="Create Discount Stack"
 			breadcrumbs={[{ content: 'Discount Stacks', url: '/discount-stacks' }]}
 		>
@@ -220,7 +222,8 @@ function CreateDiscountStack() {
 					</div>
 				</VerticalStack>
 			</Form>
-		</Page>
+			</Page>
+		</AppLayout>
 	);
 }
 

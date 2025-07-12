@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 const { connectDB } = require('./config/database');
 const redisClient = require('./config/redis');
@@ -22,6 +23,7 @@ app.use(helmet({
 			fontSrc: ["'self'", "data:"],
 			imgSrc: ["'self'", "data:", "https:"],
 			connectSrc: ["'self'", "http://localhost:3003", "https://*.ngrok-free.app"],
+			frameAncestors: ["https://*.shopify.com", "https://*.myshopify.com"],
 		},
 	},
 }));
@@ -40,25 +42,17 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Root route
+// Serve static React build files
+const frontendBuildPath = path.join(__dirname, '../../frontend/build');
+app.use(express.static(frontendBuildPath));
+
+// Root route - serve React app for Shopify
 app.get('/', (req, res) => {
 	const shop = req.query.shop;
 
 	if (shop) {
-		// If shop parameter is provided, redirect to the frontend or show app info
-		res.json({
-			message: 'Smart Discount Stack Manager API',
-			shop: shop,
-			status: 'Server is running',
-			endpoints: {
-				health: '/health',
-				redis: '/redis-test',
-				webhooks: '/api/webhooks',
-				discounts: '/api/discounts',
-				auth: '/api/auth'
-			},
-			timestamp: new Date().toISOString()
-		});
+		// Serve the React app's index.html
+		res.sendFile(path.join(frontendBuildPath, 'index.html'));
 	} else {
 		// Show general API information
 		res.json({
