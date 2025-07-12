@@ -148,6 +148,11 @@ export const dashboardApi = {
     const response = await apiClient.get('/dashboard/activity');
     return response.data;
   },
+
+  getTopPerformingStack: async () => {
+    const response = await apiClient.get('/dashboard/top-performing');
+    return response.data;
+  },
 };
 
 export default apiClient;
