@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from 'react-query';
 import enTranslations from '@shopify/polaris/locales/en.json';
 
 import Dashboard from './pages/Dashboard';
+import DashboardTest from './pages/DashboardTest';
+import NavigationTest from './pages/NavigationTest';
 import DiscountStacks from './pages/DiscountStacks';
 import CreateDiscountStack from './pages/CreateDiscountStack';
 import EditDiscountStack from './pages/EditDiscountStack';
@@ -30,6 +32,7 @@ function App() {
         <Router>
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/discount-stacks" element={<DiscountStacks />} />
             <Route path="/discount-stacks/create" element={<CreateDiscountStack />} />
             <Route path="/discount-stacks/:id/edit" element={<EditDiscountStack />} />

@@ -1,155 +1,118 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
 	Page,
 	Layout,
 	Card,
 	Text,
-	Button,
 	HorizontalStack,
 	VerticalStack,
-	Badge,
-	DataTable,
 	Icon,
+	Box,
+	Spinner,
 } from '@shopify/polaris';
 import {
-	EditMajor,
+	ProductsMajor,
+	CashDollarMajor,
+	OrdersMajor,
 } from '@shopify/polaris-icons';
-import { useNavigate } from 'react-router-dom';
-import { useDiscountStacks } from '../hooks/useDiscountStacks';
-import { navigateWithShop } from '../utils/navigation';
+import AppLayout from '../components/AppLayout';
 
 function Dashboard() {
-	const navigate = useNavigate();
-	const { data: discountStacks, isLoading, error } = useDiscountStacks();
+	const [metrics, setMetrics] = useState({
+		activeStacks: 12,
+		totalSavings: 3247,
+		ordersWithDiscounts: 847,
+	});
+	const [loading, setLoading] = useState(false);
 
-	// Ensure discountStacks is an array
-	const stacksArray = Array.isArray(discountStacks) ? discountStacks : [];
+	// Simulate API call for metrics
+	useEffect(() => {
+		// This would be replaced with actual API call
+		setLoading(false);
+	}, []);
 
-	const rows =
-		stacksArray?.slice(0, 5).map((stack) => [
-			stack.name,
-			stack.isActive ? (
-				<Badge status="success">Active</Badge>
-			) : (
-				<Badge>Inactive</Badge>
-			),
-			stack.discounts?.length || 0,
-			stack.usageCount || 0,
-			<Button
-				plain
-				onClick={() => navigateWithShop(navigate, `/discount-stacks/${stack._id}/edit`)}
-				accessibilityLabel="Edit discount stack"
-				icon={<Icon source={EditMajor} />}
-			/>,
-		]) || [];
+	const renderMetricCard = (
+		title,
+		value,
+		changeText,
+		changeColor,
+		icon,
+		iconColor
+	) => (
+		<Card>
+			<Box padding="400">
+				<HorizontalStack align="space-between" blockAlign="start">
+					<VerticalStack gap="2">
+						<Text variant="bodyMd" color="subdued" as="p">
+							{title}
+						</Text>
+						<Text variant="heading2xl" as="h3">
+							{loading ? <Spinner size="small" /> : value}
+						</Text>
+						{changeText && !loading && (
+							<Text variant="bodySm" color={changeColor} as="p">
+								{changeText}
+							</Text>
+						)}
+					</VerticalStack>
+					<div
+						style={{
+							backgroundColor: iconColor,
+							borderRadius: '8px',
+							padding: '12px',
+							color: 'white',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							minWidth: '40px',
+							minHeight: '40px',
+						}}
+					>
+						<Icon source={icon} tone="base" />
+					</div>
+				</HorizontalStack>
+			</Box>
+		</Card>
+	);
 
 	return (
-		<Page
-			title="Smart Discount Stack Manager"
-			primaryAction={{
-				content: 'Create Discount Stack',
-				onAction: () => {
-					if (process.env.NODE_ENV === 'development') {
-						console.log('Primary action clicked');
-					}
-					navigateWithShop(navigate, '/discount-stacks/create');
-				},
-			}}
-		>
-			<Layout>
-				<Layout.Section>
-					<Card>
-						<div style={{ padding: '20px' }}>
-							<VerticalStack gap="5">
-								<Text variant="headingLg">
-									Welcome to Smart Discount Stack Manager
-								</Text>
-								<Text>
-									Create and manage complex discount combinations for your
-									Shopify store. Stack multiple discounts, set conditions, and
-									track performance.
-								</Text>
-								<HorizontalStack>
-									<Button
-										primary
-										onClick={() => {
-											console.log('Navigate to create discount stack');
-											console.log(
-												'Current location:',
-												window.location.pathname
-											);
-											try {
-												navigateWithShop(navigate, '/discount-stacks/create');
-												console.log('Navigation called successfully');
-											} catch (error) {
-												console.error('Navigation error:', error);
-											}
-										}}
-									>
-										Create Your First Stack
-									</Button>
-									<Button
-										onClick={() => {
-											console.log('Navigate to view all stacks');
-											console.log(
-												'Current location:',
-												window.location.pathname
-											);
-											try {
-												navigateWithShop(navigate, '/discount-stacks');
-												console.log('Navigation called successfully');
-											} catch (error) {
-												console.error('Navigation error:', error);
-											}
-										}}
-									>
-										View All Stacks
-									</Button>
-								</HorizontalStack>
-							</VerticalStack>
-						</div>
-					</Card>
-				</Layout.Section>
-
-				<Layout.Section>
-					<Card>
-						<div style={{ padding: '20px' }}>
-							<VerticalStack gap="5">
-								<Text variant="headingLg">Recent Discount Stacks</Text>
-								{isLoading ? (
-									<Text>Loading...</Text>
-								) : error ? (
-									<Text>
-										Unable to load discount stacks. Please check your
-										connection.
-									</Text>
-								) : rows.length > 0 ? (
-									<DataTable
-										columnContentTypes={[
-											'text',
-											'text',
-											'numeric',
-											'numeric',
-											'text',
-										]}
-										headings={[
-											'Name',
-											'Status',
-											'Discounts',
-											'Usage',
-											'Actions',
-										]}
-										rows={rows}
-									/>
-								) : (
-									<Text>No discount stacks created yet.</Text>
-								)}
-							</VerticalStack>
-						</div>
-					</Card>
-				</Layout.Section>
-			</Layout>
-		</Page>
+		<AppLayout>
+			<Page
+				title="Dashboard"
+				subtitle="Overview of your discount stacks and performance metrics"
+			>
+				<Layout>
+					<Layout.Section>
+						<VerticalStack gap="4">
+							{renderMetricCard(
+								'Active Stacks',
+								metrics.activeStacks,
+								'+2 from last week',
+								'success',
+								ProductsMajor,
+								'#00A047'
+							)}
+							{renderMetricCard(
+								'Total Savings',
+								`$${metrics.totalSavings.toLocaleString()}`,
+								'+12% from last month',
+								'success',
+								CashDollarMajor,
+								'#00A047'
+							)}
+							{renderMetricCard(
+								'Orders with Discounts',
+								metrics.ordersWithDiscounts.toLocaleString(),
+								'+8% from last month',
+								'success',
+								OrdersMajor,
+								'#0070F3'
+							)}
+						</VerticalStack>
+					</Layout.Section>
+				</Layout>
+			</Page>
+		</AppLayout>
 	);
 }
 

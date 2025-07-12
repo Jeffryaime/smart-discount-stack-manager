@@ -4,13 +4,13 @@ import axios from 'axios';
 const getApiBaseUrl = () => {
   // Get ngrok URL from environment variable
   const ngrokApiUrl = process.env.REACT_APP_NGROK_URL;
-  
+
   // If accessed through ngrok (contains ngrok-free.app in hostname)
   if (window.location.hostname.includes('ngrok-free.app')) {
     // Use the ngrok backend URL from environment
     return ngrokApiUrl || 'http://localhost:3000/api';
   }
-  
+
   // Check if we're in a Shopify context (has shop parameter)
   const urlParams = new URLSearchParams(window.location.search);
   const shop = urlParams.get('shop');
@@ -18,7 +18,7 @@ const getApiBaseUrl = () => {
     // If we have a real shop parameter, use ngrok for API calls
     return ngrokApiUrl || 'http://localhost:3000/api';
   }
-  
+
   // For local development, use environment variable or default
   return process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 };
@@ -44,18 +44,18 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   const urlParams = new URLSearchParams(window.location.search);
   const shop = urlParams.get('shop');
-  
+
   // In development mode, use a default shop if none provided
   const isDevelopment = process.env.NODE_ENV === 'development';
   const shopParam = shop || (isDevelopment ? 'jaynorthcode.myshopify.com' : null);
-  
+
   if (shopParam) {
     config.params = {
       ...config.params,
       shop: shopParam,
     };
   }
-  
+
   return config;
 });
 
@@ -134,6 +134,18 @@ export const discountStacksApi = {
 
   getFilterMetadata: async () => {
     const response = await apiClient.get('/discounts/filters');
+    return response.data;
+  },
+};
+
+export const dashboardApi = {
+  getMetrics: async () => {
+    const response = await apiClient.get('/dashboard/metrics');
+    return response.data;
+  },
+
+  getRecentActivity: async () => {
+    const response = await apiClient.get('/dashboard/activity');
     return response.data;
   },
 };
