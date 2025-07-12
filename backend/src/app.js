@@ -40,10 +40,48 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Root route
+app.get('/', (req, res) => {
+	const shop = req.query.shop;
+
+	if (shop) {
+		// If shop parameter is provided, redirect to the frontend or show app info
+		res.json({
+			message: 'Smart Discount Stack Manager API',
+			shop: shop,
+			status: 'Server is running',
+			endpoints: {
+				health: '/health',
+				redis: '/redis-test',
+				webhooks: '/api/webhooks',
+				discounts: '/api/discounts',
+				auth: '/api/auth'
+			},
+			timestamp: new Date().toISOString()
+		});
+	} else {
+		// Show general API information
+		res.json({
+			message: 'Smart Discount Stack Manager API',
+			status: 'Server is running',
+			endpoints: {
+				health: '/health',
+				redis: '/redis-test',
+				webhooks: '/api/webhooks',
+				discounts: '/api/discounts',
+				auth: '/api/auth'
+			},
+			usage: 'Add ?shop=your-shop.myshopify.com to get shop-specific information',
+			timestamp: new Date().toISOString()
+		});
+	}
+});
+
 // Routes
 app.use('/api/webhooks', require('./routes/webhooks'));
 app.use('/api/discounts', require('./routes/discounts'));
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/dashboard', require('./routes/dashboard'));
 
 // Health check
 app.get('/health', (req, res) => {
